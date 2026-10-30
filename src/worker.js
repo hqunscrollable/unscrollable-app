@@ -7,8 +7,9 @@ import { notify } from './discord.js';
 const TZ = 'Asia/Karachi';             // assumption: the founders' working day. Confirm.
 const SESSION_DAYS = 30;
 const COOKIE = 'uns_app';
+const TRUST_COOKIE = 'uns_dev', TRUST_DAYS = 30;     // remembered device: skips the authenticator code, never the password
 const LOCK_AFTER = 5, LOCK_MINUTES = 15;
-const PUBLIC_PAGES = new Set(['/app/login.html', '/app/login.js', '/app/login.css', '/app/reset.html', '/app/reset.js',
+const PUBLIC_PAGES = new Set(['/app/login.html', '/app/login.js', '/app/login.css', '/app/reset.html', '/app/reset.js', '/app/eye.js',
   '/app/favicon.svg', '/app/icon-180.png', '/app/icon-192.png', '/app/icon-512.png', '/app/icon-maskable-512.png', '/app/manifest.webmanifest']);
 const OWNERS = ['Tabish', 'Ali', 'Mehak'];
 const T_STATUS = ['todo', 'doing', 'blocked', 'done'];
@@ -34,8 +35,11 @@ function withSec(res) {
   for (const [k, v] of Object.entries(SEC)) r.headers.set(k, v);
   return r;
 }
-const json = (data, status = 200, extra = {}) =>
-  withSec(new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', ...extra } }));
+const json = (data, status = 200, extra = {}) => {
+  const h = new Headers({ 'content-type': 'application/json' });
+  for (const [k, v] of Object.entries(extra)) { if (Array.isArray(v)) v.forEach(x => h.append(k, x)); else h.set(k, v); }
+  return withSec(new Response(JSON.stringify(data), { status, headers: h }));
+};
 const bad = (msg, status = 400) => json({ error: msg }, status);
 
 const todayStr = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d);
@@ -80,6 +84,44 @@ async function startSession(env, req, userId) {
 }
 const clearCookie = `${COOKIE}=; Path=/app; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
 
+// ---------- recovery codes and remembered devices ----------
+const normCode = (c) => String(c || '').toLowerCase().replace(/[\s-]/g, '');
+const isRecovery = (n) => /^[0-9a-f]{10}$/.test(n);            // 10 hex characters. An authenticator code is 6 digits.
+async function makeRecoveryCodes(env, userId) {
+  const codes = [], stmts = [env.DB.prepare('DELETE FROM recovery_codes WHERE user_id = ?').bind(userId)];
+  for (let i = 0; i < 10; i++) {
+    const c = randomHex(5);
+    codes.push(c.slice(0, 5) + '-' + c.slice(5));
+    stmts.push(env.DB.prepare('INSERT INTO recovery_codes(code_hash,user_id) VALUES (?,?)').bind(await sha256hex(userId + ':' + c), userId));
+  }
+  await env.DB.batch(stmts);
+  return codes;
+}
+async function useRecoveryCode(env, userId, norm) {
+  const r = await env.DB.prepare('UPDATE recovery_codes SET used_at = ? WHERE code_hash = ? AND user_id = ? AND used_at IS NULL')
+    .bind(nowIso(), await sha256hex(userId + ':' + norm), userId).run();
+  return !!(r.meta && r.meta.changes > 0);
+}
+async function recoveryLeft(env, userId) {
+  const r = await env.DB.prepare('SELECT COUNT(*) AS n FROM recovery_codes WHERE user_id = ? AND used_at IS NULL').bind(userId).first();
+  return r ? r.n : 0;
+}
+async function trustedValid(env, userId, tok) {
+  if (!tok || tok.length < 40) return false;
+  const h = await sha256hex(tok);
+  const row = await env.DB.prepare('SELECT token_hash FROM trusted_devices WHERE token_hash = ? AND user_id = ? AND expires_at > ?').bind(h, userId, nowIso()).first();
+  if (!row) return false;
+  await env.DB.prepare('UPDATE trusted_devices SET last_used_at = ? WHERE token_hash = ?').bind(nowIso(), h).run();
+  return true;
+}
+async function trustDevice(env, req, userId) {
+  const tok = randomHex(32);
+  await env.DB.prepare('INSERT INTO trusted_devices(token_hash,user_id,expires_at,ua) VALUES (?,?,?,?)')
+    .bind(await sha256hex(tok), userId, new Date(Date.now() + TRUST_DAYS * 864e5).toISOString(), (req.headers.get('user-agent') || '').slice(0, 120)).run();
+  return `${TRUST_COOKIE}=${tok}; Path=/app; HttpOnly; Secure; SameSite=Strict; Max-Age=${TRUST_DAYS * 86400}`;
+}
+const clearTrustCookie = `${TRUST_COOKIE}=; Path=/app; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
+
 function passwordProblem(pw, loginId) {
   if (typeof pw !== 'string' || pw.length < 12) return 'Use at least 12 characters.';
   if (pw.length > 200) return 'Too long.';
@@ -105,10 +147,12 @@ async function login(env, req) {
     return json({ error: 'Too many tries. Wait and try again.' }, 429);
   }
   const ok = safeEqual(await hashPassword(pw, u.salt, u.iterations), u.password_hash);
-  let codeOk = true;
+  let codeOk = true, trusted = false, usedRecovery = false;
   if (ok && u.totp_enabled) {
-    const secret = await decryptSecret(u.totp_secret_enc, env.TOTP_KEY);
-    codeOk = await verifyTotp(secret, b.code);
+    const n = normCode(b.code);
+    if (await trustedValid(env, u.id, cookieOf(req, TRUST_COOKIE))) trusted = true;
+    else if (isRecovery(n)) { codeOk = await useRecoveryCode(env, u.id, n); usedRecovery = codeOk; }
+    else codeOk = await verifyTotp(await decryptSecret(u.totp_secret_enc, env.TOTP_KEY), b.code);
   }
   if (!ok || !codeOk) {
     const n = u.failed_count + 1;
@@ -121,9 +165,16 @@ async function login(env, req) {
   }
   await env.DB.prepare('UPDATE credentials SET failed_count = 0, locked_until = NULL WHERE user_id = ?').bind(u.id).run();
   if (u.must_reset) return json({ must_reset: true, error: 'Your password has to be set first. Open the setup link Tabish sent you, or ask him for a new one.' }, 403);
-  const cookie = await startSession(env, req, u.id);
-  await log(env, loginId, 'login', 'user', u.id);
-  return json({ ok: true, totp_enabled: !!u.totp_enabled }, 200, { 'set-cookie': cookie });
+  const cookies = [await startSession(env, req, u.id)];
+  if (u.totp_enabled && !trusted && b.remember === true) cookies.push(await trustDevice(env, req, u.id));
+  await log(env, loginId, 'login', 'user', u.id, trusted ? 'remembered device' : usedRecovery ? 'recovery code' : (cookies.length > 1 ? 'device remembered' : null));
+  let left;
+  if (usedRecovery) {
+    left = await recoveryLeft(env, u.id);
+    await log(env, loginId, 'recovery_code_used', 'user', u.id, left + ' left');
+    await notify(env, 'alerts', `${u.name} signed in with a recovery code. ${left} left.`);
+  }
+  return json({ ok: true, totp_enabled: !!u.totp_enabled, recovery_left: left }, 200, { 'set-cookie': cookies });
 }
 
 async function logout(env, req) {
@@ -142,9 +193,12 @@ async function changePassword(env, user, req) {
   await env.DB.prepare('UPDATE credentials SET password_hash=?, salt=?, iterations=?, updated_at=? WHERE user_id=?')
     .bind(await hashPassword(b.new, salt), salt, ITERATIONS, nowIso(), user.id).run();
   const tok = cookieOf(req, COOKIE);
-  await env.DB.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash <> ?').bind(user.id, await sha256hex(tok)).run();
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash <> ?').bind(user.id, await sha256hex(tok)),
+    env.DB.prepare('DELETE FROM trusted_devices WHERE user_id = ?').bind(user.id)
+  ]);
   await log(env, user.login_id, 'password_changed', 'user', user.id);
-  return json({ ok: true });
+  return json({ ok: true }, 200, { 'set-cookie': clearTrustCookie });
 }
 
 async function resetWithToken(env, req) {
@@ -160,7 +214,8 @@ async function resetWithToken(env, req) {
     env.DB.prepare('UPDATE credentials SET password_hash=?, salt=?, iterations=?, must_reset=0, failed_count=0, locked_until=NULL, updated_at=? WHERE user_id=?')
       .bind(await hashPassword(b.password, salt), salt, ITERATIONS, nowIso(), row.user_id),
     env.DB.prepare('UPDATE reset_tokens SET used_at = ? WHERE token_hash = ?').bind(nowIso(), th),
-    env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(row.user_id)
+    env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(row.user_id),
+    env.DB.prepare('DELETE FROM trusted_devices WHERE user_id = ?').bind(row.user_id)
   ]);
   await log(env, row.login_id, 'password_reset', 'user', row.user_id);
   return json({ ok: true });
@@ -193,8 +248,24 @@ async function twofaEnable(env, user, req) {
   if (!c || !c.totp_secret_enc) return bad('Start setup first.');
   if (!(await verifyTotp(await decryptSecret(c.totp_secret_enc, env.TOTP_KEY), b.code))) return bad('That code is wrong.', 400);
   await env.DB.prepare('UPDATE credentials SET totp_enabled=1 WHERE user_id=?').bind(user.id).run();
+  const codes = await makeRecoveryCodes(env, user.id);
   await log(env, user.login_id, '2fa_enabled', 'user', user.id);
-  return json({ ok: true });
+  return json({ ok: true, codes });
+}
+// New recovery codes replace every old one. Needs the current password, so a stolen session cannot read or reset them.
+async function recoveryNew(env, user, req) {
+  const b = await readJson(req);
+  const cred = await env.DB.prepare('SELECT * FROM credentials WHERE user_id = ?').bind(user.id).first();
+  if (!cred || !cred.totp_enabled) return bad('Turn on two-factor first.');
+  if (!safeEqual(await hashPassword(String(b.current || ''), cred.salt, cred.iterations), cred.password_hash)) return bad('Current password is wrong.', 403);
+  const codes = await makeRecoveryCodes(env, user.id);
+  await log(env, user.login_id, 'recovery_codes_made', 'user', user.id);
+  return json({ ok: true, codes });
+}
+async function forgetDevices(env, user) {
+  await env.DB.prepare('DELETE FROM trusted_devices WHERE user_id = ?').bind(user.id).run();
+  await log(env, user.login_id, 'devices_forgotten', 'user', user.id);
+  return json({ ok: true }, 200, { 'set-cookie': clearTrustCookie });
 }
 
 // ---------- data routes ----------
@@ -390,7 +461,7 @@ async function devInfo(env, user) {
     env.DB.prepare('SELECT u.name, s.created_at, s.expires_at, s.ua FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.expires_at > ? ORDER BY s.created_at DESC').bind(nowIso()).all()
   ]);
   const ct = await env.DB.prepare('SELECT created_at, expires_at, can_write, last_used_at FROM claude_tokens WHERE revoked = 0 AND expires_at > ? ORDER BY created_at DESC').bind(nowIso()).all();
-  return json({ activity: act.results, flags: flags.results, integrations: integ.results, counts, sessions: sess.results, claude_tokens: ct.results, version: '1.2.1-dev' });
+  return json({ activity: act.results, flags: flags.results, integrations: integ.results, counts, sessions: sess.results, claude_tokens: ct.results, version: '1.2.3-dev' });
 }
 async function setFlag(env, user, key, req) {
   if (!user.is_dev) return bad('Not allowed.', 403);
@@ -715,11 +786,13 @@ async function route(req, env) {
     }
     if (!user) return bad('Sign in first.', 401);
     let m;
-    if (api === '/me' && method === 'GET') return json({ id: user.id, name: user.name, login_id: user.login_id, role: user.role, is_dev: !!user.is_dev, totp_enabled: !!user.totp_enabled });
+    if (api === '/me' && method === 'GET') return json({ id: user.id, name: user.name, login_id: user.login_id, role: user.role, is_dev: !!user.is_dev, totp_enabled: !!user.totp_enabled, recovery_left: user.claude ? 0 : await recoveryLeft(env, user.id) });
     if (api === '/logout' && method === 'POST') return logout(env, req);
     if (api === '/password' && method === 'POST') return changePassword(env, user, req);
     if (api === '/2fa/setup' && method === 'POST') return twofaSetup(env, user);
     if (api === '/2fa/enable' && method === 'POST') return twofaEnable(env, user, req);
+    if (api === '/2fa/recovery' && method === 'POST') return recoveryNew(env, user, req);
+    if (api === '/2fa/forget-devices' && method === 'POST') return forgetDevices(env, user);
     // Contractor and client accounts can sign in and manage their own login, but see no founder data until their own screens exist.
     if (user.role !== 'founder') return bad('This account has no access to the founders app yet.', 403);
     if (api === '/data' && method === 'GET') return allData(env, user);
@@ -798,6 +871,7 @@ export default {
       if (!ok) { await notify(env, 'errors', 'Health check failed: no active users found.'); return; }
       if (event.cron === '0 4 * * 1') await notify(env, 'alerts', 'Monday check: the app is healthy.');
       await env.DB.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(nowIso()).run();
+      await env.DB.prepare('DELETE FROM trusted_devices WHERE expires_at < ?').bind(nowIso()).run();
       await env.DB.prepare('DELETE FROM claude_tokens WHERE expires_at < ?').bind(new Date(Date.now() - 864e5).toISOString()).run();
     } catch (e) {
       await notify(env, 'errors', `Health check error: ${String(e && e.message || e).slice(0, 200)}`);

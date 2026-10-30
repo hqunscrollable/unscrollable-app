@@ -11,7 +11,7 @@
   function applyFlags() { Object.keys(L.flags || {}).forEach(function (k) { if (S.flags[k]) S.flags[k].back = L.flags[k]; }); }
   applyFlags();
   document.getElementById('markslot').innerHTML = U.MARK;
-  document.getElementById('verTxt').textContent = 'v1.2.1-dev. Signed in as ' + ME.name;
+  document.getElementById('verTxt').textContent = 'v1.2.3-dev. Signed in as ' + ME.name;
 
   /* ---------- helpers ---------- */
   var STAGES = [['sent', 'Connection sent'], ['accepted', 'Connection accepted'], ['comment', 'First comment'], ['dm', 'DM started'], ['guide', 'Guide sent'], ['audit', 'Audit offered or sent'], ['pitched', 'Call pitched (old)'], ['booked', 'Call booked'], ['away', 'Away']];
@@ -333,7 +333,16 @@
   U.screens.account = function () {
     var h = head('My account', 'Signed in as ' + esc(ME.name) + ' (' + esc(ME.login_id) + ').');
     h += '<div class="grid g2" style="align-items:start"><div class="card"><h3 style="margin-bottom:8px">Change password</h3><div class="stack" style="gap:10px"><label class="f">Current password<input id="pw_cur" type="password" autocomplete="current-password"></label><label class="f">New password (12 characters or more)<input id="pw_new" type="password" autocomplete="new-password"></label><div><button type="button" class="btn pri" data-act="pwsave">Change password</button></div></div></div>'
-      + '<div class="card"><h3 style="margin-bottom:8px">Two-factor sign-in</h3>' + (ME.totp_enabled ? '<div class="banner">Two-factor is on for your account.</div>' : '<div class="stack" style="gap:10px"><div class="sm">Founders use an authenticator app. Set it up now: press the button, add the key to your app, then type the 6-digit code to confirm.</div>' + (S.ui.twofa ? '<div class="card tight"><div class="sm mut">Key (type it into your authenticator app)</div><code style="overflow-wrap:anywhere;font-size:15px">' + esc(S.ui.twofa.secret) + '</code></div><label class="f">6-digit code<input id="tf_code" inputmode="numeric" maxlength="7" autocomplete="one-time-code"></label><div><button type="button" class="btn pri" data-act="tfon">Turn on</button></div>' : '<div><button type="button" class="btn pri" data-act="tfsetup">Start setup</button></div>') + '</div>') + '</div></div>';
+      + '<div class="card"><h3 style="margin-bottom:8px">Two-factor sign-in</h3>' + (ME.totp_enabled ? '<div class="banner">Two-factor is on for your account. On the sign-in page you can type a recovery code in place of the authenticator code, and tick Remember this device to skip the code on this computer for 30 days.</div>' : '<div class="stack" style="gap:10px"><div class="sm">Founders use an authenticator app. Set it up now: press the button, add the key to your app, then type the 6-digit code to confirm.</div>' + (S.ui.twofa ? '<div class="card tight"><div class="sm mut">Key (type it into your authenticator app)</div><code style="overflow-wrap:anywhere;font-size:15px">' + esc(S.ui.twofa.secret) + '</code></div><label class="f">6-digit code<input id="tf_code" inputmode="numeric" maxlength="7" autocomplete="one-time-code"></label><div><button type="button" class="btn pri" data-act="tfon">Turn on</button></div>' : '<div><button type="button" class="btn pri" data-act="tfsetup">Start setup</button></div>') + '</div>') + '</div></div>';
+    if (ME.totp_enabled || S.ui.codes) {
+      h += '<div class="grid g2" style="align-items:start"><div class="card"><h3 style="margin-bottom:8px">Recovery codes</h3><div class="stack" style="gap:10px">';
+      if (S.ui.codes) {
+        h += '<div class="banner warn"><b>Save these now.</b> They are shown once. Each works one time in place of the authenticator code. Keep them in your password manager.</div><div class="rcodes">' + S.ui.codes.map(function (c) { return '<span>' + esc(c) + '</span>'; }).join('') + '</div><div class="row"><button type="button" class="btn" data-act="rccopy">Copy all</button><button type="button" class="btn pri" data-act="rcsave">I saved them</button></div>';
+      } else {
+        h += '<div class="sm">' + (ME.recovery_left ? esc(String(ME.recovery_left)) + ' unused codes left.' : 'You have no recovery codes yet.') + ' Making new ones cancels all the old ones. Lost your phone? A recovery code gets you in.</div><label class="f">Current password<input id="rc_pw" type="password" autocomplete="current-password"></label><div><button type="button" class="btn pri" data-act="rcnew">Make new codes</button></div>';
+      }
+      h += '</div></div><div class="card"><h3 style="margin-bottom:8px">Remembered devices</h3><div class="stack" style="gap:10px"><div class="sm">Computers where you ticked Remember this device skip the authenticator code for 30 days. They still need your password. Changing your password forgets them all.</div><div><button type="button" class="btn" data-act="devforget">Forget all remembered devices</button></div></div></div></div>';
+    }
     return '<div class="stack">' + h + '</div>';
   };
 
@@ -362,7 +371,7 @@
       + '<div><button type="button" class="btn pri" data-act="ucreate">Create and get link</button></div>'
       + (S.ui.nl ? '<div class="card tight"><div class="sm">Send this link to ' + esc(S.ui.nl.who) + ' privately. It works once, for one hour.</div><code style="overflow-wrap:anywhere">' + esc(location.origin + S.ui.nl.path) + '</code></div>' : '') + '</div></div>';
     h += '<div class="card scroll"><h3 style="margin-bottom:8px">Activity log</h3><table class="tbl"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Detail</th></tr></thead><tbody>' + DEV.activity.map(function (a) { return '<tr><td class="tn">' + esc(a.at) + '</td><td>' + esc(a.actor || '') + '</td><td>' + esc(a.action) + '</td><td>' + esc(a.detail || '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
-    h += '<div class="sm mut">Version 1.2.1-dev. Backups: run <code>node scripts/backup-db.mjs</code> on the PC (see README).</div>';
+    h += '<div class="sm mut">Version 1.2.3-dev. Backups: run <code>node scripts/backup-db.mjs</code> on the PC (see README).</div>';
     return '<div class="stack">' + h + '</div>';
   };
 
@@ -538,7 +547,11 @@
   A.radd = function () { var t = val('r_text'); if (!t) return; run(api('POST', '/radar', { text: t, state: val('r_state') })); };
   A.pwsave = function () { api('POST', '/password', { current: val('pw_cur'), new: val('pw_new') }).then(function () { U.toast('Password changed.'); U.render(); }).catch(function (e) { U.toast('<b>Not changed.</b> ' + esc(e.message)); }); };
   A.tfsetup = function () { api('POST', '/2fa/setup', {}).then(function (r) { S.ui.twofa = r; U.render(); }).catch(function (e) { U.toast(esc(e.message)); }); };
-  A.tfon = function () { api('POST', '/2fa/enable', { code: val('tf_code') }).then(function () { ME.totp_enabled = true; S.ui.twofa = null; U.toast('Two-factor is on.'); U.render(); }).catch(function (e) { U.toast('<b>Not turned on.</b> ' + esc(e.message)); }); };
+  A.tfon = function () { api('POST', '/2fa/enable', { code: val('tf_code') }).then(function (r) { ME.totp_enabled = true; S.ui.twofa = null; S.ui.codes = r.codes || null; ME.recovery_left = (r.codes || []).length; U.toast('Two-factor is on.'); U.render(); }).catch(function (e) { U.toast('<b>Not turned on.</b> ' + esc(e.message)); }); };
+  A.rcnew = function () { api('POST', '/2fa/recovery', { current: val('rc_pw') }).then(function (r) { S.ui.codes = r.codes; ME.recovery_left = r.codes.length; U.render(); }).catch(function (e) { U.toast('<b>No new codes.</b> ' + esc(e.message)); }); };
+  A.rcsave = function () { S.ui.codes = null; U.render(); };
+  A.rccopy = function () { var t = (S.ui.codes || []).join('\n'); try { navigator.clipboard.writeText(t).then(function () { U.toast('Copied.'); }, function () { U.toast('Could not copy. Select the codes and copy by hand.'); }); } catch (e) { U.toast('Could not copy. Select the codes and copy by hand.'); } };
+  A.devforget = function () { api('POST', '/2fa/forget-devices', {}).then(function () { U.toast('All remembered devices forgotten.'); }).catch(function (e) { U.toast(esc(e.message)); }); };
   A.flag = function (el) { api('POST', '/flags/' + el.getAttribute('data-id'), { on: el.getAttribute('data-on') === '1' }).then(function () { DEV = null; return reload(); }).catch(function (e) { U.toast(esc(e.message)); }); };
   A.ucreate = function () {
     var nm = val('nu_name'), lid = val('nu_id').toLowerCase(), role = val('nu_role');

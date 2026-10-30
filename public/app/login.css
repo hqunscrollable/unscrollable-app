@@ -10,3 +10,9 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
 button{width:100%;padding:12px;font:inherit;font-weight:600;color:#fff;background:var(--brand);border:0;border-radius:10px;cursor:pointer}
 button:disabled{opacity:.6}
 .err{color:var(--bad);font-size:14px;min-height:20px;margin:0 0 10px}
+.eyew{position:relative;display:block}
+.eyew input{padding-right:48px}
+.box .eyeb{position:absolute;right:2px;bottom:2px;width:44px;height:44px;margin:0;padding:0;background:transparent;color:var(--mut);display:flex;align-items:center;justify-content:center;border-radius:10px}
+.eyeb:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.chk{display:flex;gap:10px;align-items:center;margin:0 0 14px;font-size:14px}
+.chk input{width:auto;margin:0;min-height:0}

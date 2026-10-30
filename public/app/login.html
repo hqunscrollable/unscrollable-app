@@ -5,7 +5,8 @@
 <h1>Unscrollable</h1><p class="sub">Founders sign in here.</p>
 <label>Sign-in ID<input id="id" name="username" autocomplete="username" autocapitalize="none" required></label>
 <label>Password<input id="pw" name="password" type="password" autocomplete="current-password" required></label>
-<label>Authenticator code <span style="color:var(--mut)">(if turned on)</span><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7"></label>
+<label>Authenticator code or recovery code <span style="color:var(--mut)">(if two-factor is on)</span><input id="code" autocomplete="one-time-code" maxlength="14" autocapitalize="none" spellcheck="false"></label>
+<label class="chk"><input id="rem" type="checkbox"> Remember this device for 30 days</label>
 <p class="err" id="err" role="alert"></p>
 <button id="go" type="submit">Sign in</button>
-</form><script src="/app/login.js"></script></body></html>
+</form><script src="/app/eye.js"></script><script src="/app/login.js"></script></body></html>
