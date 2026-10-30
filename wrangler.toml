@@ -17,9 +17,9 @@ database_name = "uns-app"
 database_id = "36cd6f9f-65d1-4ee5-9547-f72e0b4891c4"
 migrations_dir = "migrations"
 
-# Production route (add when the domain is on the Cloudflare account and the
-# mail DNS records have been copied exactly). The public site stays untouched.
-# routes = [{ pattern = "unscrollable.studio/app*", zone_name = "unscrollable.studio" }]
+# Production route. The domain is on the hq Cloudflare account and the mail records were
+# copied exactly (checked 2026-10-30). The public site at the root stays untouched.
+routes = [{ pattern = "unscrollable.studio/app*", zone_name = "unscrollable.studio" }]
 
 # Cron: weekly health check and Monday all-clear.
 [triggers]
