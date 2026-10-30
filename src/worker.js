@@ -8,7 +8,8 @@ const TZ = 'Asia/Karachi';             // assumption: the founders' working day.
 const SESSION_DAYS = 30;
 const COOKIE = 'uns_app';
 const LOCK_AFTER = 5, LOCK_MINUTES = 15;
-const PUBLIC_PAGES = new Set(['/app/login.html', '/app/login.js', '/app/login.css', '/app/reset.html', '/app/reset.js']);
+const PUBLIC_PAGES = new Set(['/app/login.html', '/app/login.js', '/app/login.css', '/app/reset.html', '/app/reset.js',
+  '/app/favicon.svg', '/app/icon-180.png', '/app/icon-192.png', '/app/icon-512.png', '/app/icon-maskable-512.png', '/app/manifest.webmanifest']);
 const OWNERS = ['Tabish', 'Ali', 'Mehak'];
 const T_STATUS = ['todo', 'doing', 'blocked', 'done'];
 const T_PRIO = ['high', 'normal', 'low'];
