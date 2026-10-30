@@ -1,0 +1,6 @@
+node_modules/
+.state/
+.wrangler/
+*.sql
+!migrations/*.sql
+user.sql

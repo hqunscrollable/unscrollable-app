@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Set a new password</title><link rel="stylesheet" href="/app/login.css"></head>
+<body><form class="box" id="f">
+<h1>New password</h1><p class="sub">12 characters or more. Use a password manager.</p>
+<label>New password<input id="pw" type="password" autocomplete="new-password" required minlength="12"></label>
+<label>Repeat it<input id="pw2" type="password" autocomplete="new-password" required minlength="12"></label>
+<p class="err" id="err" role="alert"></p>
+<button id="go" type="submit">Save password</button>
+</form><script src="/app/reset.js"></script></body></html>

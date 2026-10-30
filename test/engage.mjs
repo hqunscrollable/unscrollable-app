@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+const ok = (n, c, x) => { console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' ' + (x || ''))); if (!c) process.exitCode = 1; };
+await p.goto('http://localhost:8799/app/'); await p.fill('#id', 'tabish'); await p.fill('#pw', 'test-pass-123456'); await p.click('#go');
+await p.waitForSelector('[data-act="nav"][data-id="home"]'); await p.click('[data-act="nav"][data-id="home"]');
+const t = await p.textContent('#main'); ok('engage card day 3', /Touch 3 of 5/.test(t), t.slice(0, 300));
+await p.screenshot({ path: '/tmp/t/engage.png', fullPage: true });
+await p.locator('[data-act="engdone"]').first().click(); await p.waitForTimeout(700);
+ok('engage done removes card', !/Touch 3 of 5/.test(await p.textContent('#main')));
+console.log('ERRORS:', errs.join('|') || 'none'); await b.close();

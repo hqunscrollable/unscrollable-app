@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Sign in</title><link rel="stylesheet" href="/app/login.css"></head>
+<body><form class="box" id="f" autocomplete="on">
+<h1>Unscrollable</h1><p class="sub">Founders sign in here.</p>
+<label>Sign-in ID<input id="id" name="username" autocomplete="username" autocapitalize="none" required></label>
+<label>Password<input id="pw" name="password" type="password" autocomplete="current-password" required></label>
+<label>Authenticator code <span style="color:var(--mut)">(if turned on)</span><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7"></label>
+<p class="err" id="err" role="alert"></p>
+<button id="go" type="submit">Sign in</button>
+</form><script src="/app/login.js"></script></body></html>

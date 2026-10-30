@@ -1,0 +1,15 @@
+{
+  "name": "unscrollable-app",
+  "version": "1.0.0-dev",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local --persist-to .state",
+    "db:local": "wrangler d1 migrations apply uns-app --local --persist-to .state",
+    "test": "node test/run.mjs",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.153.0"
+  }
+}

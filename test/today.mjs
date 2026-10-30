@@ -1,0 +1,31 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('console:' + m.text()); });
+const ok = (n, c, x) => { console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' ' + (x || ''))); if (!c) process.exitCode = 1; };
+await p.goto('http://localhost:8799/app/'); await p.fill('#id', 'tabish'); await p.fill('#pw', 'test-pass-123456'); await p.click('#go');
+await p.waitForSelector('[data-act="nav"][data-id="home"]');
+let t = await p.textContent('#main');
+ok('Today header', /Today/.test(t) && /Your five/.test(t) && /Engage/.test(t) && /Watchlist today/.test(t), t.slice(0, 200));
+ok('no Follow-ups nav', (await p.locator('[data-act="nav"][data-id="followups"]').count()) === 0);
+ok('tiles', (await p.locator('.tday-tiles .tile').count()) === 6);
+await p.screenshot({ path: '/tmp/t/today-light.png', fullPage: true });
+// make a lead with a link, ensure avatar placeholder + fetch path does not crash
+await p.click('[data-act="nav"][data-id="leads"]'); await p.click('[data-act="laddtoggle"]');
+await p.fill('#a_name', 'Photo Test'); await p.fill('#a_url', 'https://www.linkedin.com/in/photo-test-1');
+await p.click('[data-act="laddsave"]'); await p.waitForTimeout(2500);
+await p.click('[data-act="lview"][data-id="all"]');
+ok('initial avatar shown', (await p.locator('.avb .avp.ini').count()) > 0);
+// upload a generated image through the real file chooser path
+const png = await p.evaluate(() => { const c = document.createElement('canvas'); c.width = 200; c.height = 120; const x = c.getContext('2d'); x.fillStyle = '#4A5BD6'; x.fillRect(0, 0, 200, 120); return c.toDataURL('image/png'); });
+const buf = Buffer.from(png.split(',')[1], 'base64');
+const [fc] = await Promise.all([p.waitForEvent('filechooser'), p.locator('.avb').first().click()]);
+await fc.setFiles({ name: 'p.png', mimeType: 'image/png', buffer: buf }); await p.waitForTimeout(1200);
+ok('photo shown after upload', (await p.locator('img.avp').count()) > 0);
+const src = await p.locator('img.avp').first().getAttribute('src');
+const r = await p.evaluate(async (u) => { const x = await fetch(u); return [x.status, x.headers.get('content-type'), x.headers.get('cache-control')]; }, src);
+ok('avatar served', r[0] === 200 && r[1] === 'image/jpeg', JSON.stringify(r));
+await p.click('[data-act="nav"][data-id="home"]'); await p.waitForTimeout(300);
+await p.setViewportSize({ width: 390, height: 844 }); await p.screenshot({ path: '/tmp/t/today-phone.png', fullPage: true });
+ok('no horizontal scroll at phone', await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+await p.setViewportSize({ width: 1440, height: 1000 });
+await p.evaluate(() => { document.documentElement.setAttribute('data-theme', 'dark'); }); await p.screenshot({ path: '/tmp/t/today-dark.png', fullPage: true });
+console.log('ERRORS:', errs.join('|') || 'none'); await b.close();

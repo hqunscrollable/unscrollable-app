@@ -1,0 +1,10 @@
+const B = 'http://localhost:8799/app/api', H = { 'x-uns': '1', 'content-type': 'application/json' };
+const ok = (n, c, x) => { console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' ' + x)); if (!c) process.exitCode = 1; };
+const login = (id, pw) => fetch(B + '/login', { method: 'POST', headers: H, body: JSON.stringify({ login_id: id, password: pw }) });
+const r1 = await login('tabish', 'test-pass-123456'); const ck = r1.headers.get('set-cookie').split(';')[0];
+ok('login', r1.status === 200);
+const l = await fetch(B + '/admin/reset-link', { method: 'POST', headers: { ...H, cookie: ck }, body: JSON.stringify({ login_id: 'tabish' }) });
+ok('self link made', l.status === 200);
+const r2 = await login('tabish', 'test-pass-123456'); ok('can still sign in after self link', r2.status === 200, r2.status);
+const nu = await fetch(B + '/admin/users', { method: 'POST', headers: { ...H, cookie: ck }, body: JSON.stringify({ name: 'Pending P', login_id: 'pend' + Date.now() % 100000, role: 'contractor' }) });
+ok('new user made', nu.status === 200 || nu.status === 201, nu.status);

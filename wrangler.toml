@@ -1,0 +1,31 @@
+name = "unscrollable-app"
+main = "src/worker.js"
+compatibility_date = "2026-10-01"
+
+# Static front end. The Worker runs first for everything under /app so it can
+# check the session before any page or script is served.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/app/*", "/app"]
+html_handling = "none"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "uns-app"
+# Tabish: after `wrangler d1 create uns-app` on the hq@ account, paste the id here.
+database_id = "36cd6f9f-65d1-4ee5-9547-f72e0b4891c4"
+migrations_dir = "migrations"
+
+# Production route (add when the domain is on the Cloudflare account and the
+# mail DNS records have been copied exactly). The public site stays untouched.
+# routes = [{ pattern = "unscrollable.studio/app*", zone_name = "unscrollable.studio" }]
+
+# Cron: weekly health check and Monday all-clear.
+[triggers]
+crons = ["0 4 * * 1", "30 3 * * *"]
+
+# Secrets (set in the Cloudflare dashboard or with `wrangler secret put`, never in this file):
+#   TOTP_KEY          32 random bytes, base64. Encrypts two-factor secrets.
+#   DISCORD_ERRORS    webhook URL for the errors channel
+#   DISCORD_ALERTS    webhook URL for the alerts channel
