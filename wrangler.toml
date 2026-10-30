@@ -2,6 +2,9 @@ name = "unscrollable-app"
 main = "src/worker.js"
 compatibility_date = "2026-10-01"
 
+# Production route. Must stay above the first [table] header, or it is read as part of that table.
+routes = [{ pattern = "unscrollable.studio/app*", zone_name = "unscrollable.studio" }]
+
 # Static front end. The Worker runs first for everything under /app so it can
 # check the session before any page or script is served.
 [assets]
@@ -19,7 +22,6 @@ migrations_dir = "migrations"
 
 # Production route. The domain is on the hq Cloudflare account and the mail records were
 # copied exactly (checked 2026-10-30). The public site at the root stays untouched.
-routes = [{ pattern = "unscrollable.studio/app*", zone_name = "unscrollable.studio" }]
 
 # Cron: weekly health check and Monday all-clear.
 [triggers]
