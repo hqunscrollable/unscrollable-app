@@ -1,6 +1,6 @@
 // Loads the session and data first, then the app scripts in order, then starts.
 (function () {
-  var SCRIPTS = ['core.js', 'screens_a.js', 'screens_b.js', 'screens_c.js', 'screens_d.js', 'live.js'];
+  var SCRIPTS = ['core.js', 'screens_a.js', 'screens_b.js', 'screens_c.js', 'screens_d.js', 'releases.js', 'live.js', 'build.js'];
   function fail() { location.href = '/app/login.html'; }
   function get(path) {
     return fetch(path, { credentials: 'same-origin' }).then(function (r) {

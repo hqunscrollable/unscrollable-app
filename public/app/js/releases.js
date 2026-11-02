@@ -1,0 +1,29 @@
+/* What's new. One entry per release, newest first. Written in plain words for the founders.
+   Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
+window.UNS_RELEASES = [
+  { v: '1.3.2', date: '2 Nov 2026', title: 'Build dashboard and your own notes',
+    what: 'A Build page in the sidebar (Tabish only) that shows the whole app at a glance: live version, built version, what is next, your steps on the PC, features and risks.',
+    does: 'Reads STATUS.json from the repo, so it is always the real state. Also holds private notes with tags, pins and search, saved in the database.',
+    friction: 'A new Claude session reads the same file and knows the current stage. You stop re-explaining where things are. Bookmark unscrollable.studio/app/#build.',
+    where: 'Build, under System in the sidebar.' },
+  { v: '1.3.1', date: '1 Nov 2026', title: "What's new, inside the app",
+    what: 'A banner on Today and this page that explain every update the moment it ships.',
+    does: 'Shows each new feature in three lines: what it is, what it does, and how it saves you effort. The banner goes away after you read it.',
+    friction: 'You no longer need a message from Tabish to learn something changed. Open this page any time to see the full history.',
+    where: "Today (banner) and What's new in the sidebar." },
+  { v: '1.3.0', date: '1 Nov 2026', title: 'Forgot your password? Reset it by email',
+    what: 'A Forgot password link on the sign-in page that emails you a one-time reset link.',
+    does: 'Sends a link to the email saved on your account. The link works once and lasts 30 minutes. You still need your authenticator code or a recovery code to sign in afterwards.',
+    friction: 'No more waiting for another founder to make you a reset link in Developer. First step: save your email in My account.',
+    where: 'Sign-in page, and Email for password reset in My account.' },
+  { v: '1.2.3', date: '30 Oct 2026', title: 'Eye icon, recovery codes, remember this device',
+    what: 'Three sign-in helpers. An eye icon shows or hides what you type in password fields. Ten recovery codes replace the authenticator code if your phone is lost. A Remember this device box skips the code for 30 days.',
+    does: 'Each recovery code works once and still needs your password. Remembered devices are forgotten when you change your password.',
+    friction: 'Fewer typos on long passwords, no lockout if your phone dies, and no code on every sign-in from your own computer.',
+    where: 'Sign-in page and My account.' },
+  { v: '1.2.2', date: '30 Oct 2026', title: 'Lives on unscrollable.studio, installs on your phone',
+    what: 'The app moved to unscrollable.studio/app and has its own icon.',
+    does: 'Add it to your phone home screen and it opens like an app, with the Unscrollable icon.',
+    friction: 'One address to remember, one tap to open.',
+    where: 'unscrollable.studio/app' }
+];

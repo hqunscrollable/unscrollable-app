@@ -1,0 +1,34 @@
+import { chromium } from 'playwright';
+const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) process.exitCode = 1; };
+const B = 'http://localhost:8787', H = { 'x-uns': '1', 'content-type': 'application/json' };
+const PW = 'test-pass-123456';
+const adm = (await fetch(B + '/app/api/login', { method: 'POST', headers: H, body: JSON.stringify({ login_id: 'tabish', password: PW }) })).headers.getSetCookie()[0].split(';')[0];
+const nu = await (await fetch(B + '/app/api/admin/users', { method: 'POST', headers: { ...H, cookie: adm }, body: JSON.stringify({ name: 'BD', login_id: 'bd' + (Date.now() % 100000), role: 'founder' }) })).json();
+await fetch(B + '/app/api/reset', { method: 'POST', headers: H, body: JSON.stringify({ token: nu.path.split('#')[1], password: PW }) });
+const login = (await (await fetch(B + '/app/api/admin/users', { headers: { cookie: adm } })).json()).users.filter(u => u.name === 'BD').pop().login_id;
+const fl = (await fetch(B + '/app/api/login', { method: 'POST', headers: H, body: JSON.stringify({ login_id: login, password: PW }) })).headers.getSetCookie()[0].split(';')[0];
+for (const [m, p, b] of [['GET', '/admin/build'], ['POST', '/admin/notes', { text: 'x' }]]) {
+  const r = await fetch(B + '/app/api' + p, { method: m, headers: { ...H, cookie: fl }, body: b ? JSON.stringify(b) : undefined });
+  ok('non-dev blocked ' + p, r.status === 403);
+}
+const br = await chromium.launch(); const pg = await br.newPage({ viewport: { width: 1100, height: 1100 } }); const errs = []; pg.on('pageerror', e => errs.push(String(e)));
+await pg.goto(B + '/app/login.html'); await pg.fill('#id', 'tabish'); await pg.fill('#pw', PW); await pg.click('#go'); await pg.waitForURL('**/app/');
+await pg.waitForSelector('[data-act=nav][data-id=build]');
+await pg.click('[data-act=nav][data-id=build]'); await pg.waitForSelector('.bento');
+let t = await pg.textContent('#main');
+ok('shows live and built', /1\.2\.3/.test(t) && /1\.3\.2/.test(t) && /Waiting for you to deploy/.test(t));
+ok('ship checklist and features', /git am/.test(t) && /Mobile basics/.test(t));
+await pg.click('[data-act=bfs][data-id=Idea]'); t = await pg.textContent('#main'); ok('filter Idea', (await pg.locator('.card.tight').count()) === 3);
+await pg.fill('#bn_t', 'Remember the SMTP test'); await pg.selectOption('#bn_g', 'Remember'); await pg.click('[data-act=bnadd]'); await pg.waitForTimeout(500);
+ok('note saved', /Remember the SMTP test/.test(await pg.textContent('#main')));
+await pg.click('[data-act=bnpin]'); await pg.waitForTimeout(400); ok('pinned', /📌/.test(await pg.textContent('#main')));
+await pg.reload(); await pg.waitForSelector('[data-act=nav][data-id=build]'); await pg.click('[data-act=nav][data-id=build]'); await pg.waitForSelector('.bn');
+ok('note survives reload', /Remember the SMTP test/.test(await pg.textContent('#main')));
+await pg.fill('#bn_q', 'zzz'); await pg.waitForTimeout(200); ok('search hides', !/Remember the SMTP/.test(await pg.textContent('#main')));
+await pg.fill('#bn_q', 'smtp'); await pg.waitForTimeout(200); ok('search finds', /Remember the SMTP/.test(await pg.textContent('#main')));
+await pg.click('[data-act=bndel]'); await pg.click('[data-act=bndel]'); await pg.waitForTimeout(400); ok('deleted', !/Remember the SMTP/.test(await pg.textContent('#main')));
+await pg.goto(B + '/app/#build'); await pg.waitForSelector('.bento'); ok('hash shortcut opens Build', true);
+await pg.screenshot({ path: '/tmp/build.png', fullPage: true });
+await pg.setViewportSize({ width: 390, height: 800 }); await pg.waitForTimeout(300);
+ok('no sideways scroll on phone', await pg.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+ok('no page errors', errs.length === 0); await br.close();

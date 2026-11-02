@@ -3,13 +3,15 @@ import {
   encryptSecret, decryptSecret, newTotpSecret, verifyTotp
 } from './crypto.js';
 import { notify } from './discord.js';
+import { sendMail, emailOk } from './mail.js';
+import STATUS from '../STATUS.json';
 
 const TZ = 'Asia/Karachi';             // assumption: the founders' working day. Confirm.
 const SESSION_DAYS = 30;
 const COOKIE = 'uns_app';
 const TRUST_COOKIE = 'uns_dev', TRUST_DAYS = 30;     // remembered device: skips the authenticator code, never the password
 const LOCK_AFTER = 5, LOCK_MINUTES = 15;
-const PUBLIC_PAGES = new Set(['/app/login.html', '/app/login.js', '/app/login.css', '/app/reset.html', '/app/reset.js', '/app/eye.js',
+const PUBLIC_PAGES = new Set(['/app/login.html', '/app/login.js', '/app/login.css', '/app/reset.html', '/app/reset.js', '/app/forgot.html', '/app/forgot.js', '/app/eye.js',
   '/app/favicon.svg', '/app/icon-180.png', '/app/icon-192.png', '/app/icon-512.png', '/app/icon-maskable-512.png', '/app/manifest.webmanifest']);
 const OWNERS = ['Tabish', 'Ali', 'Mehak'];
 const T_STATUS = ['todo', 'doing', 'blocked', 'done'];
@@ -218,6 +220,73 @@ async function resetWithToken(env, req) {
     env.DB.prepare('DELETE FROM trusted_devices WHERE user_id = ?').bind(row.user_id)
   ]);
   await log(env, row.login_id, 'password_reset', 'user', row.user_id);
+  return json({ ok: true });
+}
+
+// 1.3.0: forgot password by email. Same answer for every request, so nobody can learn who has an account.
+const FORGOT_MINUTES = 30, FORGOT_PER_USER_HOUR = 3, FORGOT_ALL_HOUR = 20;
+async function forgot(env, req, ctx) {
+  const b = await readJson(req);
+  const loginId = String(b.login_id || '').trim().toLowerCase().slice(0, 60);
+  const done = () => json({ ok: true });
+  if (!loginId) return done();
+  const u = await env.DB.prepare('SELECT id, login_id, name, email, active FROM users WHERE login_id = ?').bind(loginId).first();
+  if (!u || !u.active || !emailOk(u.email)) return done();
+  const hourAgo = new Date(Date.now() - 3600e3).toISOString();
+  const mine = await env.DB.prepare("SELECT COUNT(*) n FROM reset_tokens WHERE via='mail' AND user_id=? AND created_at > ?").bind(u.id, hourAgo).first();
+  const all = await env.DB.prepare("SELECT COUNT(*) n FROM reset_tokens WHERE via='mail' AND created_at > ?").bind(hourAgo).first();
+  if (mine.n >= FORGOT_PER_USER_HOUR || all.n >= FORGOT_ALL_HOUR) { await log(env, u.login_id, 'reset_mail_limited', 'user', u.id); return done(); }
+  const tok = randomHex(24), now = nowIso();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE reset_tokens SET used_at = ? WHERE user_id = ? AND via = 'mail' AND used_at IS NULL").bind(now, u.id),
+    env.DB.prepare("INSERT INTO reset_tokens(token_hash,user_id,expires_at,created_at,via) VALUES (?,?,?,?,'mail')")
+      .bind(await sha256hex(tok), u.id, new Date(Date.now() + FORGOT_MINUTES * 60e3).toISOString(), now)
+  ]);
+  const link = new URL(req.url).origin + '/app/reset.html#' + tok;
+  const text = 'Hi ' + u.name + ',\n\nSomeone asked to reset the password for your Unscrollable sign-in (' + u.login_id + '). Open this link to choose a new one:\n\n' + link
+    + '\n\nThe link works once and expires in ' + FORGOT_MINUTES + ' minutes. You will still need your authenticator code or a recovery code to sign in afterwards.\n\nIf you did not ask for this, ignore this email. Nothing changes.\n\nUnscrollable';
+  ctx.waitUntil((async () => {
+    try { await sendMail(env, { to: u.email, subject: 'Reset your Unscrollable password', text }); await log(env, u.login_id, 'reset_mail_sent', 'user', u.id); }
+    catch (e) { await log(env, u.login_id, 'reset_mail_failed', 'user', u.id, String(e.message || e).slice(0, 120)); await notify(env, 'errors', 'Reset email failed for ' + u.login_id + ': ' + String(e.message || e).slice(0, 120)); }
+  })());
+  return done();
+}
+// Own email: needs the current password, so a stolen session cannot redirect resets.
+async function setMyEmail(env, user, req) {
+  const b = await readJson(req);
+  const cred = await env.DB.prepare('SELECT * FROM credentials WHERE user_id = ?').bind(user.id).first();
+  if (!safeEqual(await hashPassword(String(b.current || ''), cred.salt, cred.iterations), cred.password_hash)) return bad('Current password is wrong.', 403);
+  const e = String(b.email || '').trim().toLowerCase();
+  if (e && !emailOk(e)) return bad('That email address does not look right.');
+  await env.DB.prepare('UPDATE users SET email = ? WHERE id = ?').bind(e || null, user.id).run();
+  await log(env, user.login_id, 'email_set', 'user', user.id);
+  return json({ ok: true, email: e || null });
+}
+async function setSeenRelease(env, user, req) {
+  if (user.claude) return bad('Not allowed.', 403);
+  const b = await readJson(req);
+  const v = String(b.v || '');
+  if (!/^[0-9.]{1,12}$/.test(v)) return bad('Bad version.');
+  await env.DB.prepare('UPDATE users SET seen_release = ? WHERE id = ?').bind(v, user.id).run();
+  return json({ ok: true });
+}
+async function adminSetEmail(env, user, req) {
+  if (!user.is_dev) return bad('Not allowed.', 403);
+  const b = await readJson(req);
+  const e = String(b.email || '').trim().toLowerCase();
+  if (e && !emailOk(e)) return bad('That email address does not look right.');
+  const t = await env.DB.prepare('SELECT id, login_id FROM users WHERE login_id = ?').bind(String(b.login_id || '').toLowerCase()).first();
+  if (!t) return bad('No such user.', 404);
+  await env.DB.prepare('UPDATE users SET email = ? WHERE id = ?').bind(e || null, t.id).run();
+  await log(env, user.login_id, 'email_set_by_dev', 'user', t.id);
+  return json({ ok: true });
+}
+async function adminMailTest(env, user) {
+  if (!user.is_dev) return bad('Not allowed.', 403);
+  const me = await env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(user.id).first();
+  if (!me || !emailOk(me.email)) return bad('Set your own email first (My account).');
+  try { await sendMail(env, { to: me.email, subject: 'Unscrollable test email', text: 'If you can read this, the app can send email. Nothing else to do.' }); }
+  catch (e) { return bad('Send failed. ' + String(e.message || e).slice(0, 160), 502); }
   return json({ ok: true });
 }
 
@@ -463,6 +532,41 @@ async function devInfo(env, user) {
   const ct = await env.DB.prepare('SELECT created_at, expires_at, can_write, last_used_at FROM claude_tokens WHERE revoked = 0 AND expires_at > ? ORDER BY created_at DESC').bind(nowIso()).all();
   return json({ activity: act.results, flags: flags.results, integrations: integ.results, counts, sessions: sess.results, claude_tokens: ct.results, version: '1.2.3-dev' });
 }
+// ---------- Build dashboard (Tabish only): STATUS.json from the repo plus internal notes ----------
+const NOTE_TAGS = ['Idea', 'Decision', 'Remember', 'Bug', 'Question'];
+async function buildInfo(env, user) {
+  if (!user.is_dev) return bad('Not allowed.', 403);
+  const n = await env.DB.prepare('SELECT id, text, tag, pin, created_at, updated_at FROM dev_notes ORDER BY pin DESC, updated_at DESC LIMIT 500').all();
+  return json({ status: STATUS, notes: n.results });
+}
+async function noteCreate(env, user, req) {
+  if (!user.is_dev) return bad('Not allowed.', 403);
+  const b = await readJson(req);
+  const text = String(b.text || '').trim().slice(0, 4000);
+  if (!text) return bad('Write something first.');
+  const tag = NOTE_TAGS.includes(b.tag) ? b.tag : 'Idea';
+  const nid = id('n'), t = nowIso();
+  await env.DB.prepare('INSERT INTO dev_notes(id,text,tag,pin,author,created_at,updated_at) VALUES (?,?,?,?,?,?,?)').bind(nid, text, tag, b.pin ? 1 : 0, user.login_id, t, t).run();
+  return json({ id: nid });
+}
+async function noteUpdate(env, user, nid, req) {
+  if (!user.is_dev) return bad('Not allowed.', 403);
+  const b = await readJson(req);
+  const cur = await env.DB.prepare('SELECT * FROM dev_notes WHERE id = ?').bind(nid).first();
+  if (!cur) return bad('Not found.', 404);
+  const text = b.text === undefined ? cur.text : String(b.text).trim().slice(0, 4000);
+  if (!text) return bad('Note cannot be empty.');
+  const tag = b.tag === undefined ? cur.tag : (NOTE_TAGS.includes(b.tag) ? b.tag : cur.tag);
+  const pin = b.pin === undefined ? cur.pin : (b.pin ? 1 : 0);
+  await env.DB.prepare('UPDATE dev_notes SET text=?, tag=?, pin=?, updated_at=? WHERE id=?').bind(text, tag, pin, nowIso(), nid).run();
+  return json({ ok: true });
+}
+async function noteDelete(env, user, nid) {
+  if (!user.is_dev) return bad('Not allowed.', 403);
+  await env.DB.prepare('DELETE FROM dev_notes WHERE id = ?').bind(nid).run();
+  return json({ ok: true });
+}
+
 async function setFlag(env, user, key, req) {
   if (!user.is_dev) return bad('Not allowed.', 403);
   const b = await readJson(req);
@@ -476,7 +580,7 @@ async function setFlag(env, user, key, req) {
 async function adminUsers(env, user) {
   if (!user.is_dev) return bad('Not allowed.', 403);
   const r = await env.DB.prepare(
-    `SELECT u.id, u.login_id, u.name, u.role, u.is_dev, u.active, u.last_seen, u.created_at, c.totp_enabled, c.must_reset
+    `SELECT u.id, u.login_id, u.name, u.email, u.role, u.is_dev, u.active, u.last_seen, u.created_at, c.totp_enabled, c.must_reset
      FROM users u JOIN credentials c ON c.user_id = u.id ORDER BY u.created_at`).all();
   return json({ users: r.results });
 }
@@ -754,7 +858,7 @@ async function avatarFetch(env, user, kind, rid) {
 }
 
 // ---------- router ----------
-async function route(req, env) {
+async function route(req, env, ctx) {
   const url = new URL(req.url);
   const p = url.pathname.replace(/\/+$/, '') || '/';
   const method = req.method;
@@ -771,6 +875,7 @@ async function route(req, env) {
     }
     if (api === '/login' && method === 'POST') return login(env, req);
     if (api === '/reset' && method === 'POST') return resetWithToken(env, req);
+    if (api === '/forgot' && method === 'POST') return forgot(env, req, ctx);
     let user;
     const auth = req.headers.get('authorization') || '';
     if (auth.startsWith('Bearer ')) {
@@ -786,13 +891,15 @@ async function route(req, env) {
     }
     if (!user) return bad('Sign in first.', 401);
     let m;
-    if (api === '/me' && method === 'GET') return json({ id: user.id, name: user.name, login_id: user.login_id, role: user.role, is_dev: !!user.is_dev, totp_enabled: !!user.totp_enabled, recovery_left: user.claude ? 0 : await recoveryLeft(env, user.id) });
+    if (api === '/me' && method === 'GET') return json({ id: user.id, name: user.name, login_id: user.login_id, role: user.role, is_dev: !!user.is_dev, totp_enabled: !!user.totp_enabled, recovery_left: user.claude ? 0 : await recoveryLeft(env, user.id), ...(user.claude ? { email: null, seen_release: null } : (await env.DB.prepare('SELECT email, seen_release FROM users WHERE id = ?').bind(user.id).first()) || {}) });
     if (api === '/logout' && method === 'POST') return logout(env, req);
     if (api === '/password' && method === 'POST') return changePassword(env, user, req);
     if (api === '/2fa/setup' && method === 'POST') return twofaSetup(env, user);
     if (api === '/2fa/enable' && method === 'POST') return twofaEnable(env, user, req);
     if (api === '/2fa/recovery' && method === 'POST') return recoveryNew(env, user, req);
     if (api === '/2fa/forget-devices' && method === 'POST') return forgetDevices(env, user);
+    if (api === '/me/email' && method === 'POST') return setMyEmail(env, user, req);
+    if (api === '/me/seen' && method === 'POST') return setSeenRelease(env, user, req);
     // Contractor and client accounts can sign in and manage their own login, but see no founder data until their own screens exist.
     if (user.role !== 'founder') return bad('This account has no access to the founders app yet.', 403);
     if (api === '/data' && method === 'GET') return allData(env, user);
@@ -824,8 +931,16 @@ async function route(req, env) {
     if (api === '/radar' && method === 'POST') return radarCreate(env, user, req);
     if ((m = api.match(/^\/radar\/([\w]+)$/)) && method === 'PATCH') return radarUpdate(env, user, m[1], req);
     if (api === '/dev' && method === 'GET') return devInfo(env, user);
+    if (api === '/admin/build' && method === 'GET') return buildInfo(env, user);
+    if (api === '/admin/notes' && method === 'POST') return noteCreate(env, user, req);
+    if ((m = api.match(/^\/admin\/notes\/(\w+)$/))) {
+      if (method === 'PATCH') return noteUpdate(env, user, m[1], req);
+      if (method === 'DELETE') return noteDelete(env, user, m[1]);
+    }
     if ((m = api.match(/^\/flags\/(\w+)$/)) && method === 'POST') return setFlag(env, user, m[1], req);
     if (api === '/admin/reset-link' && method === 'POST') return adminResetLink(env, user, req);
+    if (api === '/admin/user-email' && method === 'POST') return adminSetEmail(env, user, req);
+    if (api === '/admin/mail-test' && method === 'POST') return adminMailTest(env, user);
     if (api === '/admin/users' && method === 'GET') return adminUsers(env, user);
     if (api === '/admin/users' && method === 'POST') return adminCreateUser(env, user, req);
     if ((m = api.match(/^\/admin\/users\/(\w+)\/active$/)) && method === 'POST') return adminSetActive(env, user, m[1], req);
@@ -858,7 +973,7 @@ async function health(env) {
 
 export default {
   async fetch(req, env, ctx) {
-    try { return await route(req, env); }
+    try { return await route(req, env, ctx); }
     catch (e) {
       if (e instanceof HttpError) return bad(e.message, e.status);
       ctx.waitUntil(notify(env, 'errors', `App error on ${new URL(req.url).pathname}: ${String(e && e.message || e).slice(0, 200)}`));

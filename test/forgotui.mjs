@@ -1,0 +1,14 @@
+import { chromium } from 'playwright';
+const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) process.exitCode = 1; };
+const b = await chromium.launch(); const pg = await b.newPage({ viewport: { width: 390, height: 800 } }); const errs = []; pg.on('pageerror', e => errs.push(String(e)));
+await pg.goto('http://localhost:8787/app/login.html'); ok('login has forgot link', await pg.locator('a[href="/app/forgot.html"]').count() === 1);
+await pg.click('a[href="/app/forgot.html"]'); await pg.waitForURL('**/forgot.html'); await pg.fill('#id', 'tabish'); await pg.click('#go'); await pg.waitForTimeout(600);
+ok('generic message shown', /reset link is on its way/.test(await pg.textContent('#ok')));
+await pg.screenshot({ path: '/tmp/forgot_m.png' });
+await pg.goto('http://localhost:8787/app/login.html'); await pg.fill('#id', 'tabish'); await pg.fill('#pw', 'test-pass-123456'); await pg.click('#go'); await pg.waitForURL('**/app/');
+await pg.setViewportSize({ width: 1100, height: 900 });
+await pg.waitForSelector('[data-act=nav]'); await pg.click('[data-act=nav][data-id=account]'); await pg.waitForTimeout(300);
+ok('email card on My account', /Email for password reset/.test(await pg.textContent('#main')));
+await pg.click('[data-act=nav][data-id=developer]'); await pg.waitForTimeout(700);
+ok('developer email and test button', /Send test email to me/.test(await pg.textContent('#main')));
+ok('no page errors', errs.length === 0); await b.close();

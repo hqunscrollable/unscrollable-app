@@ -2,16 +2,18 @@
    Everything else in the app is demo data from the prototype screens. */
 (function () {
   var U = window.U, S = U.S, esc = U.esc, pill = U.pill, ME = window.UNS_ME;
-  var LIVE = ['home', 'leads', 'followups', 'tasks', 'account', 'developer'];
+  var LIVE = ['home', 'leads', 'followups', 'tasks', 'whatsnew', 'account', 'developer', 'build'];
   var L = window.UNS_DATA;
   U.live = L;
   U.isLive = function (k) { return LIVE.indexOf(k) >= 0; };
+  U.SECTIONS.push(['whatsnew', "What's new", 'bell', 'System']);
+  S.flags.whatsnew = { back: true, client: false };
   U.SECTIONS.push(['account', 'My account', 'sliders', 'System']);
   S.flags.account = { back: true, client: false };
   function applyFlags() { Object.keys(L.flags || {}).forEach(function (k) { if (S.flags[k]) S.flags[k].back = L.flags[k]; }); }
   applyFlags();
   document.getElementById('markslot').innerHTML = U.MARK;
-  document.getElementById('verTxt').textContent = 'v1.2.3-dev. Signed in as ' + ME.name;
+  document.getElementById('verTxt').textContent = 'v' + (window.UNS_RELEASES && window.UNS_RELEASES[0].v || '') + '. Signed in as ' + ME.name;
 
   /* ---------- helpers ---------- */
   var STAGES = [['sent', 'Connection sent'], ['accepted', 'Connection accepted'], ['comment', 'First comment'], ['dm', 'DM started'], ['guide', 'Guide sent'], ['audit', 'Audit offered or sent'], ['pitched', 'Call pitched (old)'], ['booked', 'Call booked'], ['away', 'Away']];
@@ -293,6 +295,24 @@
       + (shown.length ? '<div class="list">' + shown.map(function (l) { return tRow(l, false); }).join('') + '</div>' : '<div class="empty">Nothing due in this list.</div>')
       + (dn.length ? '<div class="list" style="margin-top:4px">' + dn.map(function (l) { return tRow(l, true); }).join('') + '</div>' : '') + '</section>';
   }
+  /* ---------- what's new ---------- */
+  var REL = window.UNS_RELEASES || [];
+  function relUnseen() { return REL.length && ME.seen_release !== REL[0].v; }
+  function relSeen() { if (!REL.length || ME.seen_release === REL[0].v) return; ME.seen_release = REL[0].v; api('POST', '/me/seen', { v: REL[0].v }).catch(function () {}); }
+  function relBanner() {
+    if (!relUnseen()) return '';
+    var r = REL[0];
+    return '<div class="banner" style="margin-bottom:14px"><b>New in ' + esc(r.v) + ': ' + esc(r.title) + '.</b> ' + esc(r.friction) + ' <button type="button" class="btn sm" data-act="nav" data-id="whatsnew">See what changed</button> <button type="button" class="btn sm" data-act="relseen">Got it</button></div>';
+  }
+  U.screens.whatsnew = function () {
+    relSeen();
+    var h = '<div class="head"><div><div class="eyebrow">Updates</div><h1>What\'s new</h1><div class="sub">Every change to this app, in plain words, newest first.</div></div></div><div class="stack">';
+    REL.forEach(function (r, i) {
+      h += '<div class="card"><div class="row" style="justify-content:space-between;gap:8px;align-items:baseline"><h3 style="margin:0">' + esc(r.title) + '</h3><span class="sm">v' + esc(r.v) + ' &middot; ' + esc(r.date) + '</span></div><div class="stack" style="gap:8px;margin-top:10px">'
+        + '<div><b>What it is.</b> ' + esc(r.what) + '</div><div><b>What it does.</b> ' + esc(r.does) + '</div><div><b>How it cuts friction.</b> ' + esc(r.friction) + '</div><div class="sm">Where: ' + esc(r.where) + '</div></div></div>';
+    });
+    return h + '</div>';
+  };
   U.screens.home = function () {
     var who = S.ui.fuWho || ME.name, q = queue(who);
     var tk = L.tasks.filter(function (t) { return t.status !== 'done' && (who === 'All' || t.owner === who || t.owner === 'Everyone'); });
@@ -303,7 +323,7 @@
     var dueN = q.length + tkDue.length, lateN = lateL.length + tkLate.length;
     var dateTxt = new Date(L.today + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
     var seg = [[ME.name, 'Me']].concat(OWN.filter(function (o) { return o !== ME.name; }).map(function (o) { return [o, o]; })).concat([['All', 'All']]);
-    var h = '<div class="head"><div><div class="eyebrow">' + esc(dateTxt) + '</div><h1>Today</h1><div class="sub">' + dueN + ' thing' + (dueN === 1 ? '' : 's') + ' due, ' + lateN + ' overdue. The Watchlist still needs ' + wTeam + ' comment' + (wTeam === 1 ? '' : 's') + ' from the team.</div></div>'
+    var h = relBanner() + '<div class="head"><div><div class="eyebrow">' + esc(dateTxt) + '</div><h1>Today</h1><div class="sub">' + dueN + ' thing' + (dueN === 1 ? '' : 's') + ' due, ' + lateN + ' overdue. The Watchlist still needs ' + wTeam + ' comment' + (wTeam === 1 ? '' : 's') + ' from the team.</div></div>'
       + '<div class="row"><div class="seg" role="group" aria-label="Whose list">' + seg.map(function (s) { return '<button type="button" data-act="twho" data-id="' + esc(s[0]) + '" aria-pressed="' + (who === s[0]) + '">' + esc(s[1]) + '</button>'; }).join('') + '</div><button type="button" class="btn pri" data-act="tgo" data-id="leads:add">Add lead</button></div></div>';
     var tiles = [['Due today', dueN, (q.length ? q.length + ' lead' + (q.length === 1 ? '' : 's') : 'No leads') + (tkDue.length ? ', ' + tkDue.length + ' task' + (tkDue.length === 1 ? '' : 's') : ''), '', 'home'],
       ['Overdue', lateN, lateN ? 'Oldest first below' : 'All clear', lateN ? 'late' : '', 'home'], ['Engage', eg.length, 'Outside the five', '', 'home'],
@@ -334,6 +354,7 @@
     var h = head('My account', 'Signed in as ' + esc(ME.name) + ' (' + esc(ME.login_id) + ').');
     h += '<div class="grid g2" style="align-items:start"><div class="card"><h3 style="margin-bottom:8px">Change password</h3><div class="stack" style="gap:10px"><label class="f">Current password<input id="pw_cur" type="password" autocomplete="current-password"></label><label class="f">New password (12 characters or more)<input id="pw_new" type="password" autocomplete="new-password"></label><div><button type="button" class="btn pri" data-act="pwsave">Change password</button></div></div></div>'
       + '<div class="card"><h3 style="margin-bottom:8px">Two-factor sign-in</h3>' + (ME.totp_enabled ? '<div class="banner">Two-factor is on for your account. On the sign-in page you can type a recovery code in place of the authenticator code, and tick Remember this device to skip the code on this computer for 30 days.</div>' : '<div class="stack" style="gap:10px"><div class="sm">Founders use an authenticator app. Set it up now: press the button, add the key to your app, then type the 6-digit code to confirm.</div>' + (S.ui.twofa ? '<div class="card tight"><div class="sm mut">Key (type it into your authenticator app)</div><code style="overflow-wrap:anywhere;font-size:15px">' + esc(S.ui.twofa.secret) + '</code></div><label class="f">6-digit code<input id="tf_code" inputmode="numeric" maxlength="7" autocomplete="one-time-code"></label><div><button type="button" class="btn pri" data-act="tfon">Turn on</button></div>' : '<div><button type="button" class="btn pri" data-act="tfsetup">Start setup</button></div>') + '</div>') + '</div></div>';
+    h += '<div class="grid g2" style="align-items:start"><div class="card"><h3 style="margin-bottom:8px">Email for password reset</h3><div class="stack" style="gap:10px"><div class="sm">' + (ME.email ? 'On file: ' + esc(ME.email) + '.' : 'No email on file yet.') + ' Forgot password sends a reset link here. Leave empty to remove it.</div><label class="f">Email<input id="em_new" type="email" autocomplete="email"></label><label class="f">Current password<input id="em_pw" type="password" autocomplete="current-password"></label><div><button type="button" class="btn" data-act="emailsave">Save email</button></div></div></div></div>';
     if (ME.totp_enabled || S.ui.codes) {
       h += '<div class="grid g2" style="align-items:start"><div class="card"><h3 style="margin-bottom:8px">Recovery codes</h3><div class="stack" style="gap:10px">';
       if (S.ui.codes) {
@@ -354,7 +375,7 @@
     if (!DEV) { api('GET', '/dev').then(function (d) { DEV = d; U.render(); }).catch(function () {}); return '<div class="stack">' + h + '<div class="empty">Loading</div></div>'; }
     h += '<div class="grid g4">' + [['Leads', DEV.counts.leads], ['Tasks', DEV.counts.tasks], ['Board items', DEV.counts.radar], ['People', DEV.counts.users]].map(function (r) { return '<div class="card tile"><b class="tn">' + r[1] + '</b><span>' + r[0] + '</span></div>'; }).join('') + '</div>';
     h += '<div class="grid g2" style="align-items:start"><div class="card"><h3 style="margin-bottom:8px">Screens on or off</h3><div class="list">' + DEV.flags.map(function (f) { return '<div class="item"><div class="mn"><div class="t">' + esc(f.key) + '</div></div>' + (f.key === 'developer' ? pill('Always on', 'mut') : '<button type="button" class="btn sm" data-act="flag" data-id="' + esc(f.key) + '" data-on="' + (f.on_back ? 0 : 1) + '">' + (f.on_back ? 'Turn off' : 'Turn on') + '</button>') + '</div>'; }).join('') + '</div></div>'
-      + '<div class="card"><h3 style="margin-bottom:8px">Access</h3><div class="stack" style="gap:10px"><div class="sm">One-time password reset link. Valid for one hour. Send it to the person yourself. Their old sessions stop working.</div><div class="row"><input id="rl_id" placeholder="Their sign-in ID" style="flex:1;min-width:160px"><button type="button" class="btn sm" data-act="rlink">Make link</button><button type="button" class="btn sm bad" data-act="revoke">Sign them out</button></div>' + (S.ui.rl ? '<div class="card tight"><code style="overflow-wrap:anywhere">' + esc(location.origin + S.ui.rl) + '</code></div>' : '') + '</div>'
+      + '<div class="card"><h3 style="margin-bottom:8px">Access</h3><div class="stack" style="gap:10px"><div class="sm">One-time password reset link. Valid for one hour. Send it to the person yourself. Their old sessions stop working.</div><div class="row"><input id="rl_id" placeholder="Their sign-in ID" style="flex:1;min-width:160px"><button type="button" class="btn sm" data-act="rlink">Make link</button><button type="button" class="btn sm bad" data-act="revoke">Sign them out</button></div><div class="sm">Email used for their password reset link.</div><div class="row"><input id="de_id" placeholder="Their sign-in ID" style="flex:1;min-width:140px"><input id="de_em" type="email" placeholder="their@email.com" style="flex:1;min-width:160px"><button type="button" class="btn sm" data-act="devemail">Save email</button></div><div class="row"><button type="button" class="btn sm" data-act="mailtest">Send test email to me</button></div>' + (S.ui.rl ? '<div class="card tight"><code style="overflow-wrap:anywhere">' + esc(location.origin + S.ui.rl) + '</code></div>' : '') + '</div>'
       + '<h3 style="margin:14px 0 8px">Signed in now</h3><div class="list">' + (DEV.sessions.length ? DEV.sessions.slice(0, 8).map(function (s) { return '<div class="sm">' + esc(s.name) + ' since ' + esc((s.created_at || '').slice(0, 10)) + '</div>'; }).join('') : '<div class="empty">No sessions.</div>') + '</div></div></div>';
     h += '<div class="card"><h3 style="margin-bottom:8px">Claude access</h3><div class="stack" style="gap:10px"><div class="sm">Let Claude look at the app for a short time. The code works as a read-only founder view of leads, tasks, Watchlist and the board. It cannot see accounts, passwords, access or this screen. It stops by itself. Paste it to Claude in chat.</div>'
       + '<div class="row"><label class="f">Valid for<select id="ct_min">' + opts([['30', '30 minutes'], ['60', '1 hour'], ['120', '2 hours'], ['240', '4 hours']], '60') + '</select></label><label class="f">Can change data<select id="ct_w">' + opts([['0', 'No, read only'], ['1', 'Yes, can add and edit']], '0') + '</select></label></div>'
@@ -551,6 +572,10 @@
   A.rcnew = function () { api('POST', '/2fa/recovery', { current: val('rc_pw') }).then(function (r) { S.ui.codes = r.codes; ME.recovery_left = r.codes.length; U.render(); }).catch(function (e) { U.toast('<b>No new codes.</b> ' + esc(e.message)); }); };
   A.rcsave = function () { S.ui.codes = null; U.render(); };
   A.rccopy = function () { var t = (S.ui.codes || []).join('\n'); try { navigator.clipboard.writeText(t).then(function () { U.toast('Copied.'); }, function () { U.toast('Could not copy. Select the codes and copy by hand.'); }); } catch (e) { U.toast('Could not copy. Select the codes and copy by hand.'); } };
+  A.emailsave = function () { api('POST', '/me/email', { email: val('em_new'), current: document.getElementById('em_pw').value }).then(function (r) { ME.email = r.email; U.toast(r.email ? 'Email saved.' : 'Email removed.'); U.render(); }).catch(function (e) { U.toast(esc(e.message)); }); };
+  A.devemail = function () { api('POST', '/admin/user-email', { login_id: val('de_id'), email: val('de_em') }).then(function () { DEV = null; U.toast('Email saved.'); U.render(); }).catch(function (e) { U.toast(esc(e.message)); }); };
+  A.mailtest = function () { U.toast('Sending test email.'); api('POST', '/admin/mail-test', {}).then(function () { U.toast('Test email sent. Check your inbox and spam.'); }).catch(function (e) { U.toast(esc(e.message)); }); };
+  A.relseen = function () { relSeen(); U.render(); };
   A.devforget = function () { api('POST', '/2fa/forget-devices', {}).then(function () { U.toast('All remembered devices forgotten.'); }).catch(function (e) { U.toast(esc(e.message)); }); };
   A.flag = function (el) { api('POST', '/flags/' + el.getAttribute('data-id'), { on: el.getAttribute('data-on') === '1' }).then(function () { DEV = null; return reload(); }).catch(function (e) { U.toast(esc(e.message)); }); };
   A.ucreate = function () {

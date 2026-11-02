@@ -177,7 +177,7 @@ W.U.when=function(d){if(!d)return {t:'No date',c:'mut',k:99999};var k=diff(d,TOD
 /* ---------- shell ---------- */
 function visibleSections(){
   return SECTIONS.filter(function(s){
-    if(s[0]==='developer'&&!(window.UNS_ME&&window.UNS_ME.is_dev))return false;
+    if((s[0]==='developer'||s[0]==='build')&&!(window.UNS_ME&&window.UNS_ME.is_dev))return false;
     return S.flags[s[0]].back;
   });
 }
@@ -203,7 +203,7 @@ function render(){
   $('seg-door').innerHTML='<button type="button" data-act="door" data-id="back" aria-pressed="'+back+'">Back end</button><button type="button" data-act="door" data-id="client" aria-pressed="'+(!back)+'">Client door</button>';
   $('who').value=S.who;$('who').disabled=!back;
   if(back){
-    if(!S.flags[S.route]||!S.flags[S.route].back||(S.route==='developer'&&!(window.UNS_ME&&window.UNS_ME.is_dev)))S.route='home';
+    if(!S.flags[S.route]||!S.flags[S.route].back||((S.route==='developer'||S.route==='build')&&!(window.UNS_ME&&window.UNS_ME.is_dev)))S.route='home';
     $('nav').innerHTML=navHtml();
     $('whoTxt').textContent='Signed in as '+S.who+(S.who==='Tabish'?' (admin, Developer on)':' (founder)');
     $('topttl').textContent=lab(SECTIONS.map(function(s){return [s[0],s[1]];}),S.route);
