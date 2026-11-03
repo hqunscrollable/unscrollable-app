@@ -5,9 +5,28 @@ const b64 = (s) => btoa(String.fromCharCode(...enc.encode(s)));
 const clean = (s) => String(s).replace(/[\r\n]+/g, ' ').trim();
 export const emailOk = (e) => /^[^\s@<>",;:]{1,64}@[^\s@<>",;:]{1,190}\.[a-z]{2,}$/i.test(String(e || '')) && String(e).length <= 254;
 
+// Preferred path: Resend over HTTPS. Workers cannot reach Hostinger SMTP, so this is the one that works.
+// Secrets and vars: RESEND_API_KEY (secret), RESEND_FROM (optional, e.g. "Unscrollable <hq@unscrollable.studio>" once the domain is verified).
+async function sendResend(env, { to, subject, text }) {
+  const from = env.RESEND_FROM || 'Unscrollable <onboarding@resend.dev>';
+  let res;
+  try {
+    res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' },
+      body: JSON.stringify({ from, to: [clean(to)], subject: clean(subject), text: String(text) })
+    });
+  } catch (e) { throw new Error('Could not reach Resend: ' + String((e && e.message) || e).slice(0, 100)); }
+  if (!res.ok) {
+    let m = ''; try { const j = await res.json(); m = j.message || j.name || ''; } catch {}
+    throw new Error('Resend said ' + res.status + (m ? ': ' + clean(m).slice(0, 140) : ''));
+  }
+}
+
 export async function sendMail(env, { to, subject, text }, connectFn) {
-  if (!env.SMTP_PASS) throw new Error('SMTP_PASS is not set');
   if (!emailOk(to)) throw new Error('Bad recipient address');
+  if (env.RESEND_API_KEY) return sendResend(env, { to, subject, text });
+  if (!env.SMTP_PASS) throw new Error('No mail service is set up (RESEND_API_KEY or SMTP_PASS)');
   const host = env.SMTP_HOST || 'smtp.hostinger.com', port = Number(env.SMTP_PORT || 465);
   const user = env.SMTP_USER || 'hq@unscrollable.studio';
   const connect = connectFn || (await import('cloudflare:sockets')).connect;
