@@ -1,16 +1,17 @@
 {
   "updated": "2026-11-04",
-  "live": "1.3.2",
-  "built": "1.3.3",
-  "next": "1.3.4",
+  "live": "1.3.3",
+  "built": "1.3.5",
+  "next": "1.3.6",
   "pending_on_pc": [
-    "Apply unscrollable-1.3.3-dropin.zip, git add -A, commit, push, npx wrangler deploy (no migration)",
-    "Developer: switch off the Claude access code that was pasted in chat",
-    "After deploy: install to the home screen on the phone, check back gesture, stay signed in, and airplane mode"
+    "Apply unscrollable-1.3.5-dropin.zip (includes 1.3.4), git add -A, commit, push",
+    "Run the migrations: npx wrangler d1 migrations apply uns-app --remote (0008 user photo, 0009 X link), then npx wrangler deploy",
+    "Run the people import: wrangler d1 execute uns-app --remote --file=import-people-2026-11-04.sql (replaces the 20 company rows with 34 founders)",
+    "Developer: switch off any Claude access code that was pasted in chat"
   ],
-  "right_now": "1.3.3 Mobile basics is built and tested, waiting for Tabish to deploy it. Email works through Resend.",
+  "right_now": "1.3.3 is live. 1.3.5 (company markers, includes 1.3.4 faces) is built and tested, waiting for Tabish to deploy it and run the people import.",
   "blocked_on_tabish": [
-    "Deploy 1.3.3 and try it on the phone",
+    "Deploy 1.3.5 (needs the migration)",
     "Pick mobile look: playful or premium (needed for the screen pass)",
     "Watchlist for three founders: restate in one sentence",
     "Founders Desk: personal or shared",
@@ -109,9 +110,21 @@
     },
     {
       "name": "Mobile basics",
-      "state": "Tested",
+      "state": "Deployed",
       "ver": "1.3.3",
-      "note": "Back gesture, stay signed in, offline, install help. Deploy pending."
+      "note": "Back gesture, stay signed in, offline, install help."
+    },
+    {
+      "name": "Faces: your photo and coloured initials",
+      "state": "Tested",
+      "ver": "1.3.4",
+      "note": "Migration 0008. Deploy pending."
+    },
+    {
+      "name": "Company markers on leads",
+      "state": "Tested",
+      "ver": "1.3.5",
+      "note": "Same colour chip and count for people at one company, a Same company list in the lead card, a Copy link button on each lead, and a remembered light or dark choice, an X link field on leads (migration 0009), and foldable menu groups."
     },
     {
       "name": "Mobile reskin",
@@ -147,6 +160,16 @@
     "Offline mode shows saved data only. Changes made offline do not save."
   ],
   "changelog": [
+    {
+      "v": "1.3.5",
+      "date": "2026-11-04",
+      "text": "X link on leads (migration 0009), Copy link buttons, remembered light or dark. Company markers: people at the same company share a coloured chip with the company name and a count. The lead card lists the others at that company."
+    },
+    {
+      "v": "1.3.4",
+      "date": "2026-11-04",
+      "text": "Avatars on the leads board and for the signed-in person, coloured initials, tidy phone menu buttons."
+    },
     {
       "v": "1.3.3",
       "date": "2026-11-04",

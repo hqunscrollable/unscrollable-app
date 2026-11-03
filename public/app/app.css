@@ -65,7 +65,9 @@ a{color:var(--acc)}
 .nav button[aria-current="page"] svg{color:#8C9EFF}
 .nav .cnt{margin-left:auto;font-size:12px;font-weight:700;background:#8C9EFF;color:#0F1115;border-radius:999px;padding:1px 8px;min-width:24px;text-align:center}
 .nav .cnt.hot{background:#8C9EFF;color:#0F1115}
-.nav .grp{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6f7787;padding:10px 12px 4px}
+.nav .grp{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;cursor:pointer;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6f7787;padding:10px 12px 4px;min-height:32px;font-family:inherit}
+.nav .grp:hover{background:none;color:#fff}
+.nav .grp i{font-style:normal;font-size:16px;line-height:1}
 .who{margin-top:auto;font-size:12px;color:#A9B0C0;padding:8px;border-top:1px solid #262B36}
 .main{padding:24px max(20px,env(safe-area-inset-right,0px)) 80px max(24px,env(safe-area-inset-left,0px));min-width:0;max-width:1180px;width:100%}
 :root[data-door="client"] .main{margin:0;max-width:none;padding:0}
@@ -293,6 +295,27 @@ textarea{width:100%}
 .sidefoot{display:none}
 @media (max-width:860px){
   .proto{display:none}
-  .sidefoot{display:flex;gap:8px;flex-wrap:wrap;padding:12px;margin-top:auto}
+  .sidefoot{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));margin-top:auto}
+  .sidefoot .btn{justify-content:center;width:100%;min-height:44px;background:transparent;border:1px solid #3A4150;color:#C7CFFF}
+  .sidefoot .btn:hover{border-color:#8C9EFF;color:#fff}
   .topbar{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 }
+
+/* 1.3.4 avatars: coloured initials when there is no photo, a + on the ones you can tap to add one */
+:root{--avt:32%}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--avt:80%}}
+:root[data-theme="dark"]{--avt:80%}
+.avp.ini{background:hsl(var(--h,220) 60% 50% / .2);color:hsl(var(--h,220) 60% var(--avt));font-size:14px;letter-spacing:.02em}
+.side .avp.ini{background:hsl(var(--h,220) 60% 50% / .3);color:hsl(var(--h,220) 80% 85%)}
+.avb{position:relative}
+.avb.empty::after{content:"+";position:absolute;right:-3px;bottom:-3px;width:16px;height:16px;border-radius:50%;background:var(--acc);color:var(--onacc);font-size:12px;line-height:16px;font-weight:700;text-align:center;border:2px solid var(--surface);box-sizing:content-box;margin:-2px}
+.side .avb.empty::after{border-color:var(--side-bg)}
+.avbig .avp{width:56px;height:56px;font-size:20px}
+.side #whoTxt{padding:12px 4px}
+
+.co{display:inline-flex;align-items:center;gap:5px;font-weight:500;font-size:.82em;padding:1px 8px 1px 6px;border-radius:999px;vertical-align:middle;color:var(--fg);background:hsl(var(--h) 55% var(--cob,92%));border:1px solid hsl(var(--h) 45% var(--cob2,78%))}
+.co i{width:8px;height:8px;border-radius:50%;background:hsl(var(--h) 65% 48%);flex:none}
+.co b{font-weight:700;opacity:.7}
+:root{--cob:92%;--cob2:78%}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cob:22%;--cob2:34%}}
+:root[data-theme="dark"]{--cob:22%;--cob2:34%}

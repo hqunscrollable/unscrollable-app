@@ -100,23 +100,43 @@
     return '<div class="banner warn" style="margin-bottom:12px"><b>Demo screen.</b> The clients and numbers here are examples, not real. Nothing on this screen is saved to the server.</div>';
   };
 
+  function cpb(l) { return l.profile_url ? '<button type="button" class="btn sm" data-act="lcopy" data-url="' + esc(l.profile_url) + '" aria-label="Copy LinkedIn link for ' + esc(l.name) + '">Copy link</button>' : ''; }
+  function mates(l) { var c = String(l.company || '').trim().toLowerCase(); if (!c) return []; return L.leads.filter(function (x) { return x.id !== l.id && String(x.company || '').trim().toLowerCase() === c; }); }
+  function co(l) {
+    if (!l.company) return '';
+    var n = mates(l).length + 1;
+    return ' <span class="co" style="--h:' + hue(String(l.company).trim().toLowerCase()) + '" title="' + (n > 1 ? n + ' people at ' : '') + esc(l.company) + '"><i></i>' + esc(l.company) + (n > 1 ? ' <b>' + n + '</b>' : '') + '</span>';
+  }
   function engageRow(l) {
     var n = engageNum(l); if (!n) return '';
     return '<div class="row eng" style="gap:8px;margin-top:10px;flex-wrap:wrap"><span class="pill">Engage ' + n + ' of 5</span><span class="sm">Comment on or engage with their latest post.</span>'
       + '<button type="button" class="btn pri sm" data-act="engdone" data-id="' + esc(l.id) + '" data-n="' + n + '">Done</button><button type="button" class="btn sm" data-act="engskip" data-id="' + esc(l.id) + '" data-n="' + n + '">Skip</button></div>';
   }
+  function sameCo(l) {
+    var m = mates(l); if (!m.length) return '';
+    return '<div class="card stack" style="gap:8px;margin-top:12px"><div class="d">Same company: ' + esc(l.company) + '</div>' + m.map(function (x) {
+      return '<div class="item" style="align-items:center">' + av('lead', x) + '<div class="mn" style="flex:1"><div class="t">' + esc(x.name) + '</div><div class="d">' + esc(lab(STAGES, x.stage)) + '</div></div><button type="button" class="btn sm" data-act="lopen" data-id="' + esc(x.id) + '">Open</button></div>';
+    }).join('') + '</div>';
+  }
   function drawer() {
     if (!S.ui.lopen) return '';
     var ol = L.leads.filter(function (l) { return l.id === S.ui.lopen; })[0]; if (!ol) return '';
-    return '<div class="drawer-bg" data-act="lclose"></div><aside class="drawer" role="dialog" aria-label="Lead details"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3>Lead</h3><button type="button" class="btn sm" data-act="lclose">Close (Esc)</button></div>' + leadCard(ol, { owner: true, drawer: true }) + '</aside>';
+    return '<div class="drawer-bg" data-act="lclose"></div><aside class="drawer" role="dialog" aria-label="Lead details"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3>Lead</h3><button type="button" class="btn sm" data-act="lclose">Close (Esc)</button></div>' + leadCard(ol, { owner: true, drawer: true }) + sameCo(ol) + '</aside>';
   }
 
   /* ---------- profile photos ---------- */
+  function hue(s) { var h = 0; s = String(s || ''); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
+  function inits(n) { var p = String(n || '?').trim().split(/\s+/), a = p[0] ? p[0].charAt(0) : '?', b = p.length > 1 ? p[p.length - 1].charAt(0) : ''; return (a + b).toUpperCase(); }
+  function touchy() { return !!(window.matchMedia && matchMedia('(pointer: coarse)').matches); }
   function av(kind, o, btn) {
-    var ini = esc(String(o.name || '?').trim().charAt(0).toUpperCase() || '?');
-    var inner = o.avatar_v ? '<img class="avp" src="/app/api/avatar/' + kind + '/' + esc(o.id) + '?v=' + esc(o.avatar_v) + '" alt="" width="38" height="38" loading="lazy">' : '<span class="avp ini" aria-hidden="true">' + ini + '</span>';
-    return btn ? '<button type="button" class="avb" data-act="photo" data-kind="' + kind + '" data-id="' + esc(o.id) + '" title="Change photo. Choose a file, or press Ctrl+V to paste a screenshot." aria-label="Change photo for ' + esc(o.name || '') + '">' + inner + '</button>' : inner;
+    var inner = o.avatar_v ? '<img class="avp" src="/app/api/avatar/' + kind + '/' + esc(o.id) + '?v=' + esc(o.avatar_v) + '" alt="" width="38" height="38" loading="lazy">' : '<span class="avp ini" style="--h:' + hue(o.name) + '" aria-hidden="true">' + esc(inits(o.name)) + '</span>';
+    var tip = touchy() ? 'Tap to ' + (o.avatar_v ? 'change' : 'add') + ' the photo.' : 'Change photo. Choose a file, or press Ctrl+V to paste a screenshot.';
+    return btn ? '<button type="button" class="avb' + (o.avatar_v ? '' : ' empty') + '" data-act="photo" data-kind="' + kind + '" data-id="' + esc(o.id) + '" title="' + tip + '" aria-label="' + (o.avatar_v ? 'Change' : 'Add') + ' photo for ' + esc(o.name || '') + '">' + inner + '</button>' : inner;
   }
+  U.whoHtml = function () {
+    return '<div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">' + av('user', { id: ME.id, name: ME.name, avatar_v: ME.avatar_v }, true)
+      + '<div style="min-width:0"><div style="color:#F3F5FA;font-weight:600;overflow-wrap:anywhere">' + esc(ME.name) + '</div><div>Signed in' + (ME.is_dev ? ', admin' : '') + '</div></div></div>';
+  };
 
   /* ---------- lead card ---------- */
   function leadCard(l, opt) {
@@ -128,13 +148,13 @@
       + AWAY.map(function (r) { return '<option value="away|' + r + '"' + (l.stage === 'away' && l.away_reason === r ? ' selected' : '') + '>Away: ' + r + '</option>'; }).join('');
     var nm = l.profile_url ? '<a href="' + esc(l.profile_url) + '" target="_blank" rel="noopener noreferrer">' + esc(l.name) + '</a>' : esc(l.name);
     return '<div class="item" style="flex-direction:column;align-items:stretch" data-lead="' + esc(l.id) + '">'
-      + '<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="row" style="gap:12px;flex:1 1 220px;min-width:0;align-items:flex-start">' + av('lead', l, true) + '<div class="mn" style="flex:1;min-width:0"><div class="t">' + nm + (l.company ? ' <span class="mut" style="font-weight:400">' + esc(l.company) + '</span>' : '') + '</div>'
+      + '<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="row" style="gap:12px;flex:1 1 220px;min-width:0;align-items:flex-start">' + av('lead', l, true) + '<div class="mn" style="flex:1;min-width:0"><div class="t">' + nm + co(l) + '</div>'
       + '<div class="d">' + (l.stage === 'away' ? 'Away: ' + esc(l.away_reason || '') : l.stage === 'sent' ? esc(sug) : 'Day ' + d + '. ' + esc(sug)) + '</div></div></div>'
       + '<div class="row" style="gap:6px;flex-wrap:wrap">' + pill(lab(TAGS, l.tag), l.tag === 'hot' ? 'warn' : l.tag === 'warm' ? '' : 'mut') + pill(lab(STAGES, l.stage)) + pill(l.owner) + (l.list === 'any' ? pill('Any industry' + (l.industry ? ': ' + l.industry : ''), 'mut') : '') + (l.stage !== 'away' && l.stage !== 'sent' ? '<span class="pill ' + (w.c || 'mut') + '">' + esc(w.t) + '</span>' : '') + '</div></div>'
       + engageRow(l)
       + '<div class="row" style="gap:8px;margin-top:10px">'
       + (isOpen(l) && (l.stage !== 'sent' || sinceSent(l) >= 6) ? '<button type="button" class="btn pri sm" data-act="ldone" data-id="' + esc(l.id) + '">Did it</button><button type="button" class="btn sm" data-act="lsnooze" data-id="' + esc(l.id) + '">Tomorrow</button>' : '')
-      + (opt.drawer ? '' : '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button>')
+      + cpb(l) + xb(l) + (opt.drawer ? '' : '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button>')
       + (!l.avatar_v && l.profile_url ? '<button type="button" class="btn sm" data-act="pfetch" data-kind="lead" data-id="' + esc(l.id) + '">Fetch photo</button>' : '')
       + '<label class="sm mut row" style="gap:6px">Stage<select data-chg="lstage" data-id="' + esc(l.id) + '">' + stageOpts + '</select></label>'
       + '<label class="sm mut row" style="gap:6px">Signal<select data-chg="ltag" data-id="' + esc(l.id) + '">' + opts(TAGS, l.tag) + '</select></label>'
@@ -181,6 +201,7 @@
         + '<div class="row"><label class="f">List<select id="a_list">' + opts(LISTS, lf === 'any' ? 'any' : 'icp') + '</select></label><label class="f" style="flex:1;min-width:160px">Industry (any industry list)<input id="a_ind" maxlength="80"></label></div>'
         + '<label class="f">Where do they start?<select id="a_start"><option value="comment">1st degree: start at First comment</option><option value="sent">Cold: connection request sent</option></select></label>'
         + '<label class="f">LinkedIn profile link<input id="a_url" placeholder="https://www.linkedin.com/in/..."></label>'
+        + '<label class="f">X link (optional)<input id="a_x" placeholder="https://x.com/..."></label>'
         + '<label class="f">Why they fit (active, personal brand matters, weak profile, location)<input id="a_why"></label>'
         + '<div class="row"><button type="button" class="btn pri" data-act="laddsave">Add lead</button><button type="button" class="btn" data-act="laddtoggle">Cancel</button></div></div></div>';
     }
@@ -192,7 +213,7 @@
       h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start">' + STAGES.filter(function (s) { return s[0] !== 'away' && (s[0] !== 'pitched' || ls.some(function (l) { return l.stage === 'pitched'; })); }).map(function (s) {
         var col = ls.filter(function (l) { return l.stage === s[0]; });
         return '<div class="card tight"><div class="row" style="justify-content:space-between"><b>' + s[1] + '</b>' + pill(String(col.length), 'mut') + '</div><div class="list" style="margin-top:8px">'
-          + (col.length ? col.map(function (l) { return '<div class="item" style="padding:8px"><div class="mn"><div class="t">' + esc(l.name) + '</div><div class="d">' + esc(l.owner) + (l.stage === 'sent' ? '. Sent ' + sinceSent(l) + 'd ago' : '. Day ' + funnelDay(l)) + '</div></div><div class="sd">' + pill(lab(TAGS, l.tag), l.tag === 'hot' ? 'warn' : l.tag === 'warm' ? '' : 'mut') + '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button></div></div>'; }).join('') : '<div class="empty">None</div>') + '</div></div>';
+          + (col.length ? col.map(function (l) { return '<div class="item" style="padding:8px;align-items:center;gap:10px">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + '</div><div class="d">' + co(l) + ' ' + esc(l.owner) + (l.stage === 'sent' ? '. Sent ' + sinceSent(l) + 'd ago' : '. Day ' + funnelDay(l)) + '</div></div><div class="sd">' + pill(lab(TAGS, l.tag), l.tag === 'hot' ? 'warn' : l.tag === 'warm' ? '' : 'mut') + cpb(l) + xb(l) + '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button></div></div>'; }).join('') : '<div class="empty">None</div>') + '</div></div>';
       }).join('') + '</div>';
     } else if (view === 'all') {
       var open = ls.filter(function (l) { return l.stage !== 'away'; });
@@ -284,9 +305,9 @@
   function ago(iso) { var m = Math.round((Date.now() - isoMs(iso)) / 60000); if (isNaN(m)) return ''; if (m < 60) return Math.max(m, 1) + ' min ago'; if (m < 1440) return Math.round(m / 60) + ' h ago'; return Math.round(m / 1440) + ' d ago'; }
   function tRow(l, done) {
     var w = when(l.next_due), cls = w.k < 0 ? 'warn' : 'mut';
-    return '<div class="item" style="align-items:center;flex-wrap:wrap' + (done ? ';opacity:.7' : '') + '">' + av('lead', l) + '<div class="mn" style="flex:1 1 200px"><div class="t">' + esc(l.name) + (l.company ? ' <span class="mut" style="font-weight:400">' + esc(l.company) + '</span>' : '') + '</div><div class="d">' + esc(suggest(l)) + '</div></div>'
+    return '<div class="item" style="align-items:center;flex-wrap:wrap' + (done ? ';opacity:.7' : '') + '">' + av('lead', l) + '<div class="mn" style="flex:1 1 200px"><div class="t">' + esc(l.name) + co(l) + '</div><div class="d">' + esc(suggest(l)) + '</div></div>'
       + '<div class="row" style="gap:6px;flex-wrap:wrap">' + pill(lab(STAGES, l.stage), 'mut') + (done ? pill('Done', 'good') : '<span class="pill ' + cls + '">' + esc(w.t) + '</span>')
-      + '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button>' + (done ? '' : '<button type="button" class="btn pri sm" data-act="ldone" data-id="' + esc(l.id) + '">Did it</button>') + '</div></div>';
+      + cpb(l) + '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button>' + (done ? '' : '<button type="button" class="btn pri sm" data-act="ldone" data-id="' + esc(l.id) + '">Did it</button>') + '</div></div>';
   }
   function fiveCard(title, listKey, who, q) {
     var mine5 = q.filter(function (l) { return (l.list || 'icp') === listKey; }), shown = mine5.slice(0, 5);
@@ -333,9 +354,9 @@
       + '<section class="card stack" style="gap:10px" aria-label="Engage"><div class="row" style="justify-content:space-between;gap:8px"><div class="row" style="gap:8px"><h2>Engage</h2>' + pill('Outside the five', 'warn') + '</div><span class="sm mut">Comment or like on their latest post</span></div>'
       + (eg.length ? '<div class="list">' + eg.map(function (l) {
         var n = engageNum(l);
-        return '<div class="item" style="align-items:center;flex-wrap:wrap">' + av('lead', l) + '<div class="mn" style="flex:1 1 180px"><div class="t">' + esc(l.name) + (l.company ? ' <span class="mut" style="font-weight:400">' + esc(l.company) + '</span>' : '') + '</div><div class="d">Touch ' + n + ' of 5, request sent ' + sinceSent(l) + ' day' + (sinceSent(l) === 1 ? '' : 's') + ' ago</div></div>'
+        return '<div class="item" style="align-items:center;flex-wrap:wrap">' + av('lead', l) + '<div class="mn" style="flex:1 1 180px"><div class="t">' + esc(l.name) + co(l) + '</div><div class="d">Touch ' + n + ' of 5, request sent ' + sinceSent(l) + ' day' + (sinceSent(l) === 1 ? '' : 's') + ' ago</div></div>'
           + '<span class="dots" aria-hidden="true">' + [1, 2, 3, 4, 5].map(function (i) { return '<i class="' + (i < n ? 'on' : i === n ? 'cur' : '') + '"></i>'; }).join('') + '</span>'
-          + '<button type="button" class="btn sm" data-act="engskip" data-id="' + esc(l.id) + '" data-n="' + n + '">Skip</button><button type="button" class="btn pri sm" data-act="engdone" data-id="' + esc(l.id) + '" data-n="' + n + '">Done</button></div>';
+          + cpb(l) + '<button type="button" class="btn sm" data-act="engskip" data-id="' + esc(l.id) + '" data-n="' + n + '">Skip</button><button type="button" class="btn pri sm" data-act="engdone" data-id="' + esc(l.id) + '" data-n="' + n + '">Done</button></div>';
       }).join('') + '</div>' : '<div class="empty">Nobody to engage with today.</div>') + '</section>';
     var tg = wtarget();
     var hot = L.leads.filter(function (l) { return l.tag === 'hot' && isOpen(l) && (who === 'All' || l.owner === who); }).sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); }).slice(0, 4);
@@ -343,7 +364,7 @@
       + OWN.map(function (o) { var n = wdone(o), pc = Math.min(100, Math.round(n / tg * 100)); return '<div class="stack" style="gap:6px"><div class="row" style="justify-content:space-between"><b>' + esc(o) + '</b><span class="sm mut tn">' + n + ' of ' + tg + '</span></div><div class="pbar" role="img" aria-label="' + esc(o) + ' ' + n + ' of ' + tg + '"><i style="width:' + pc + '%"></i></div></div>'; }).join('')
       + '<button type="button" class="btn pri" data-act="tgo" data-id="leads:watch">Open ' + (who === 'All' ? 'my' : 'the') + ' batch, ' + wLeft + ' left</button></section>'
       + '<section class="card stack" style="gap:8px" aria-label="Hot signals"><h2>Hot signals</h2>' + (hot.length ? '<div class="list">' + hot.map(function (l) { return '<button type="button" class="item" data-act="lopen" data-id="' + esc(l.id) + '">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + '</div><div class="d">' + esc(lab(STAGES, l.stage)) + '. Updated ' + esc(ago(l.updated_at)) + '</div></div></button>'; }).join('') + '</div>' : '<div class="empty">No leads marked Hot. Set a lead\'s Signal to Hot when they respond.</div>') + '</section>'
-      + '<section class="card stack" style="gap:8px" aria-label="Calls booked"><div class="row" style="justify-content:space-between"><h2>Calls booked</h2>' + pill(String(booked.length), booked.length ? 'good' : 'mut') + '</div>' + (booked.length ? '<div class="list">' + booked.slice(0, 4).map(function (l) { return '<button type="button" class="item" data-act="lopen" data-id="' + esc(l.id) + '">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + (l.company ? ' <span class="mut" style="font-weight:400">' + esc(l.company) + '</span>' : '') + '</div><div class="d">' + esc(l.owner) + (l.next_due ? '. ' + esc(fmt(l.next_due)) : '') + '</div></div></button>'; }).join('') + '</div>' : '<div class="empty">No calls booked yet.</div>') + '</section>'
+      + '<section class="card stack" style="gap:8px" aria-label="Calls booked"><div class="row" style="justify-content:space-between"><h2>Calls booked</h2>' + pill(String(booked.length), booked.length ? 'good' : 'mut') + '</div>' + (booked.length ? '<div class="list">' + booked.slice(0, 4).map(function (l) { return '<button type="button" class="item" data-act="lopen" data-id="' + esc(l.id) + '">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + co(l) + '</div><div class="d">' + esc(l.owner) + (l.next_due ? '. ' + esc(fmt(l.next_due)) : '') + '</div></div></button>'; }).join('') + '</div>' : '<div class="empty">No calls booked yet.</div>') + '</section>'
       + '<section class="card stack" style="gap:8px" aria-label="Blocked"><div class="row" style="justify-content:space-between"><h2>Blocked</h2>' + pill(String(blocked.length), blocked.length ? 'warn' : 'mut') + '</div>' + (blocked.length ? '<div class="list">' + blocked.slice(0, 4).map(function (t) { return '<div class="item"><div class="mn"><div class="t">' + esc(t.title) + '</div><div class="d">' + esc(t.owner) + '</div></div></div>'; }).join('') + '</div>' : '<div class="empty">Nothing is blocked.</div>') + '</section>';
     return '<div class="stack">' + h + '<div class="tday"><div class="stack">' + left + '</div><div class="stack">' + right + '</div></div>' + drawer() + '</div>';
   };
@@ -352,6 +373,7 @@
   /* ---------- MY ACCOUNT ---------- */
   U.screens.account = function () {
     var h = head('My account', 'Signed in as ' + esc(ME.name) + ' (' + esc(ME.login_id) + ').');
+    h += '<div class="card" style="margin-bottom:14px"><h3 style="margin-bottom:8px">Your photo</h3><div class="row" style="gap:14px;align-items:center;flex-wrap:wrap"><span class="avbig">' + av('user', { id: ME.id, name: ME.name, avatar_v: ME.avatar_v }) + '</span><div class="stack" style="gap:8px;flex:1 1 220px"><div class="sm">Shows in the menu so you can see who is signed in. If you add no photo, you get coloured initials.</div><div class="row" style="gap:8px"><button type="button" class="btn" data-act="photo" data-kind="user" data-id="' + esc(ME.id) + '">' + (ME.avatar_v ? 'Change photo' : 'Add photo') + '</button>' + (ME.avatar_v ? '<button type="button" class="btn" data-act="photodel">Remove</button>' : '') + '</div></div></div></div>';
     if (U.installCard) h += U.installCard();
     h += '<div class="grid g2" style="align-items:start"><div class="card"><h3 style="margin-bottom:8px">Change password</h3><div class="stack" style="gap:10px"><label class="f">Current password<input id="pw_cur" type="password" autocomplete="current-password"></label><label class="f">New password (12 characters or more)<input id="pw_new" type="password" autocomplete="new-password"></label><div><button type="button" class="btn pri" data-act="pwsave">Change password</button></div></div></div>'
       + '<div class="card"><h3 style="margin-bottom:8px">Two-factor sign-in</h3>' + (ME.totp_enabled ? '<div class="banner">Two-factor is on for your account. On the sign-in page you can type a recovery code in place of the authenticator code, and tick Remember this device to skip the code on this computer for 30 days.</div>' : '<div class="stack" style="gap:10px"><div class="sm">Founders use an authenticator app. Set it up now: press the button, add the key to your app, then type the 6-digit code to confirm.</div>' + (S.ui.twofa ? '<div class="card tight"><div class="sm mut">Key (type it into your authenticator app)</div><code style="overflow-wrap:anywhere;font-size:15px">' + esc(S.ui.twofa.secret) + '</code></div><label class="f">6-digit code<input id="tf_code" inputmode="numeric" maxlength="7" autocomplete="one-time-code"></label><div><button type="button" class="btn pri" data-act="tfon">Turn on</button></div>' : '<div><button type="button" class="btn pri" data-act="tfsetup">Start setup</button></div>') + '</div>') + '</div></div>';
@@ -499,12 +521,13 @@
       var m = Math.min(img.width, img.height), sx = (img.width - m) / 2, sy = (img.height - m) / 2;
       c.getContext('2d').drawImage(img, sx, sy, m, m, 0, 0, s, s);
       S.ui.ptarget = null;
-      run(api('PUT', '/avatar/' + t.kind + '/' + t.id, { data: c.toDataURL('image/jpeg', 0.85) }), 'Photo saved.');
+      run(api('PUT', '/avatar/' + t.kind + '/' + t.id, { data: c.toDataURL('image/jpeg', 0.85) }).then(function (r) { if (t.kind === 'user' && r && r.v) ME.avatar_v = r.v; return r; }), 'Photo saved.');
     }).catch(function () { U.toast('That file is not an image.'); });
   }
+  A.photodel = function () { run(api('DELETE', '/avatar/user/' + ME.id).then(function (r) { ME.avatar_v = null; return r; }), 'Photo removed.'); };
   A.photo = function (el) {
     S.ui.ptarget = { kind: el.getAttribute('data-kind'), id: el.getAttribute('data-id'), at: Date.now() };
-    U.toast('Choose an image, or press Ctrl+V to paste a screenshot of their photo.');
+    U.toast(touchy() ? 'Choose a photo from your phone.' : 'Choose an image, or press Ctrl+V to paste a screenshot of their photo.');
     photoInput().click();
   };
   document.addEventListener('paste', function (e) {
@@ -534,6 +557,8 @@
   A.llistsel = function (el) { S.ui.llist = el.getAttribute('data-id'); U.render(); };
   A.lview = function (el) { S.ui.lview = el.getAttribute('data-id'); U.render(); };
   A.laddtoggle = function () { S.ui.ladd = !S.ui.ladd; U.render(); };
+  A.lcopy = function (el) { U.copy(el.getAttribute('data-url'), el); };
+  function xb(l) { return l.x_url ? '<a class="btn sm" href="' + esc(l.x_url) + '" target="_blank" rel="noopener noreferrer" aria-label="Open X for ' + esc(l.name) + '">X</a><button type="button" class="btn sm" data-act="lcopy" data-url="' + esc(l.x_url) + '" aria-label="Copy X link for ' + esc(l.name) + '">Copy X</button>' : ''; }
   A.lopen = function (el) { S.ui.lopen = el.getAttribute('data-id'); U.render(); };
   A.lclose = function () { S.ui.lopen = null; U.render(); };
   A.engdone = function (el) { run(api('POST', '/leads/' + el.getAttribute('data-id') + '/engage', { n: +el.getAttribute('data-n') }), 'Engage logged.'); };
@@ -542,7 +567,7 @@
   A.laddsave = function () {
     var name = val('a_name'); if (!name) { U.toast('Name the lead.'); return; }
     var purl = val('a_url');
-    run(api('POST', '/leads', { name: name, company: val('a_co'), owner: val('a_own'), profile_url: val('a_url'), why_fit: val('a_why'), stage: val('a_start'), list: val('a_list'), industry: val('a_ind'), source: val('a_start') === 'sent' ? 'Connection request' : '1st degree connection' }), 'Lead added.').then(function (r) { S.ui.ladd = false; U.render(); if (r && r.id && purl) api('POST', '/avatar/lead/' + r.id + '/fetch', {}).then(reload).catch(function () {}); });
+    run(api('POST', '/leads', { name: name, company: val('a_co'), owner: val('a_own'), profile_url: val('a_url'), x_url: val('a_x'), why_fit: val('a_why'), stage: val('a_start'), list: val('a_list'), industry: val('a_ind'), source: val('a_start') === 'sent' ? 'Connection request' : '1st degree connection' }), 'Lead added.').then(function (r) { S.ui.ladd = false; U.render(); if (r && r.id && purl) api('POST', '/avatar/lead/' + r.id + '/fetch', {}).then(reload).catch(function () {}); });
   };
   A.ldone = function (el) {
     var id = el.getAttribute('data-id'), l = L.leads.filter(function (x) { return x.id === id; })[0]; if (!l) return;

@@ -1,6 +1,17 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.3.5', date: '4 Nov 2026', title: 'Company markers on leads',
+    what: 'People who work at the same company now carry the same coloured chip with the company name. If a company has more than one person on the list, the chip shows how many.',
+    does: 'The chip shows on the leads board, Today, Follow-ups and in the lead card. Open a lead and a Same company box lists the other people there, each with an Open button.',
+    friction: 'You can see at a glance that two cards are the same company, so you do not message both founders the same day by accident.',
+    where: 'Leads, Today and Follow-ups. Open any lead to see the Same company list.',
+    more: 'Also new: the menu groups fold and unfold. Tap Delivery, Agreements, Business and so on to hide or show what is inside. Groups that are all demo screens start folded, and your choice is remembered. Also an X link on each lead (open it or copy it, and an optional field when you add a lead), a Copy link button on every lead that has a LinkedIn link, and the light or dark choice you make is now remembered on that device. First time, the app follows the phone: light, or dark if the phone is dark.' },
+  { v: '1.3.4', date: '4 Nov 2026', title: 'Faces for everyone, and a tidier phone menu',
+    what: 'Every lead on the board, every Watchlist person and you now show a face: their photo if there is one, otherwise their initials in a colour of their own.',
+    does: 'Your own photo shows in the menu and on My account, where you can add, change or remove it. Faces with a small + on them are tappable: tap, choose a photo from your phone. The two buttons at the bottom of the phone menu are now even and readable.',
+    friction: 'You can tell people apart at a glance and see who is signed in, without reading names. Adding a photo from the phone is one tap.',
+    where: 'My account, Your photo. Tap any face in Leads or the Watchlist to add theirs.' },
   { v: '1.3.3', date: '4 Nov 2026', title: 'Phone basics: back button, stay signed in, offline',
     what: 'The app now behaves like a normal phone app. The back gesture moves between screens and closes a card, it never lands on the sign-in page, and you stay signed in while you keep using it.',
     does: 'Signed-in people skip the sign-in page. Every screen is a back step. Your session renews each time you open the app. Links from other apps no longer look like a sign-out. A red bar shows when you are offline, with the last saved data. The menu has Sign out and Light or dark on phones, and My account has install steps for your home screen.',

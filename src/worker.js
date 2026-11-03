@@ -435,15 +435,17 @@ async function leadCreate(env, user, req) {
   const owner = OWNERS.includes(b.owner) ? b.owner : user.name;
   const url = str(b.profile_url, 300) || null;
   if (url && !/^https:\/\/([a-z]+\.)?linkedin\.com\//i.test(url)) return bad('Use a LinkedIn profile link.');
+  const xurl = str(b.x_url, 200) || null;
+  if (xurl && !/^https:\/\/(www\.)?(x|twitter)\.com\//i.test(xurl)) return bad('Use an X link, like https://x.com/name.');
   const lid = id('l_');
   const start = b.stage === 'sent' ? 'sent' : 'comment';   // cold lead starts at Connection sent, 1st degree at First comment
   const t = todayStr();
   try {
     await env.DB.prepare(
-      'INSERT INTO leads(id,name,profile_url,company,owner,stage,tag,funnel_start,why_fit,source,next_action,next_due,sent_at,list,industry) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      'INSERT INTO leads(id,name,profile_url,company,owner,stage,tag,funnel_start,why_fit,source,next_action,next_due,sent_at,list,industry,x_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
       .bind(lid, name.trim(), url, str(b.company, 120), owner, start, 'warm', start === 'sent' ? null : t, str(b.why_fit, 500), str(b.source, 60),
         start === 'sent' ? 'Engage on their posts each day, then check on day 6' : 'First real comment on a recent post', start === 'sent' ? null : t,
-        start === 'sent' ? t : null, LISTS.includes(b.list) ? b.list : 'icp', str(b.industry, 80)).run();
+        start === 'sent' ? t : null, LISTS.includes(b.list) ? b.list : 'icp', str(b.industry, 80), xurl).run();
   } catch (e) {
     if (String(e).includes('UNIQUE')) return bad('This profile is already in the list.', 409);
     throw e;
@@ -493,6 +495,11 @@ async function leadUpdate(env, user, lid, req) {
     const u = str(b.profile_url, 300) || null;
     if (u && !/^https:\/\/([a-z]+\.)?linkedin\.com\//i.test(u)) return bad('Use a LinkedIn profile link.');
     add('profile_url', u);
+  }
+  if ('x_url' in b) {
+    const x = str(b.x_url, 200) || null;
+    if (x && !/^https:\/\/(www\.)?(x|twitter)\.com\//i.test(x)) return bad('Use an X link, like https://x.com/name.');
+    add('x_url', x);
   }
   if (!set.length) return bad('Nothing to change.');
   add('updated_at', nowIso());
@@ -801,7 +808,7 @@ async function claudeUser(env, tok) {
 }
 
 // ---------- profile photos ----------
-const AV_TABLE = { lead: 'leads', watch: 'watchlist' };
+const AV_TABLE = { lead: 'leads', watch: 'watchlist', user: 'users' };   // 'user' = the signed-in person's own photo
 const AV_MAX = 160000;   // base64 characters kept per photo (about 120 KB)
 async function avatarSave(env, kind, rid, mime, b64) {
   const v = String(Date.now());
@@ -813,6 +820,7 @@ async function avatarSave(env, kind, rid, mime, b64) {
 }
 async function avatarPut(env, user, kind, rid, req) {
   if (!AV_TABLE[kind]) return bad('Not found.', 404);
+  if (kind === 'user' && rid !== user.id) return bad('You can only change your own photo.', 403);
   const row = await env.DB.prepare(`SELECT id FROM ${AV_TABLE[kind]} WHERE id = ?`).bind(rid).first();
   if (!row) return bad('Not found.', 404);
   const b = await readJson(req);
@@ -834,6 +842,7 @@ async function avatarGet(env, kind, rid) {
 }
 async function avatarDelete(env, user, kind, rid) {
   if (!AV_TABLE[kind]) return bad('Not found.', 404);
+  if (kind === 'user' && rid !== user.id) return bad('You can only change your own photo.', 403);
   await env.DB.batch([
     env.DB.prepare('DELETE FROM avatars WHERE kind = ? AND id = ?').bind(kind, rid),
     env.DB.prepare(`UPDATE ${AV_TABLE[kind]} SET avatar_v = NULL WHERE id = ?`).bind(rid)
@@ -907,7 +916,7 @@ async function route(req, env, ctx) {
     }
     if (!user) return bad('Sign in first.', 401);
     let m;
-    if (api === '/me' && method === 'GET') { const ck = user.claude ? null : await renewSession(env, req).catch(() => null); return json({ id: user.id, name: user.name, login_id: user.login_id, role: user.role, is_dev: !!user.is_dev, totp_enabled: !!user.totp_enabled, recovery_left: user.claude ? 0 : await recoveryLeft(env, user.id), ...(user.claude ? { email: null, seen_release: null } : (await env.DB.prepare('SELECT email, seen_release FROM users WHERE id = ?').bind(user.id).first()) || {}) }, 200, ck ? { 'set-cookie': ck } : {}); }
+    if (api === '/me' && method === 'GET') { const ck = user.claude ? null : await renewSession(env, req).catch(() => null); return json({ id: user.id, name: user.name, login_id: user.login_id, role: user.role, is_dev: !!user.is_dev, totp_enabled: !!user.totp_enabled, recovery_left: user.claude ? 0 : await recoveryLeft(env, user.id), ...(user.claude ? { email: null, seen_release: null } : (await env.DB.prepare('SELECT email, seen_release, avatar_v FROM users WHERE id = ?').bind(user.id).first()) || {}) }, 200, ck ? { 'set-cookie': ck } : {}); }
     if (api === '/logout' && method === 'POST') return logout(env, req);
     if (api === '/password' && method === 'POST') return changePassword(env, user, req);
     if (api === '/2fa/setup' && method === 'POST') return twofaSetup(env, user);
@@ -919,7 +928,7 @@ async function route(req, env, ctx) {
     // Contractor and client accounts can sign in and manage their own login, but see no founder data until their own screens exist.
     if (user.role !== 'founder') return bad('This account has no access to the founders app yet.', 403);
     if (api === '/data' && method === 'GET') return allData(env, user);
-    if ((m = api.match(/^\/avatar\/(lead|watch)\/([\w]+)$/))) {
+    if ((m = api.match(/^\/avatar\/(lead|watch|user)\/([\w]+)$/))) {
       if (method === 'GET') return avatarGet(env, m[1], m[2]);
       if (method === 'PUT') return avatarPut(env, user, m[1], m[2], req);
       if (method === 'DELETE') return avatarDelete(env, user, m[1], m[2]);

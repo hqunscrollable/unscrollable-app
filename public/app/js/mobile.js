@@ -20,7 +20,7 @@
     f.innerHTML = '<button type="button" class="btn sm" data-act="themeflip">Light or dark</button><button type="button" class="btn sm" data-act="signout">Sign out</button>';
     side.appendChild(f);
   }
-  A.themeflip = function () { S.theme = S.theme === 'dark' ? 'light' : 'dark'; U.render(); };
+  A.themeflip = function () { S.theme = S.theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('uns-theme', S.theme); } catch (e) {} U.render(); };
 
   /* home-screen install help */
   function standalone() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
