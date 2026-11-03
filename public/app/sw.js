@@ -1,7 +1,7 @@
 /* Unscrollable app shell. Keeps the screens and the last loaded data on the device,
    so a bad connection shows "offline, showing saved data" instead of a blank page or a sign-in screen.
    Network first: online you always get the newest files. Cleared when you sign out. */
-var V = 'uns-shell-1.4.1';
+var V = 'uns-shell-1.4.2';
 var SHELL = ['/app/', '/app/app.css', '/app/eye.js', '/app/favicon.svg', '/app/icon-192.png',
   '/app/js/boot.js', '/app/js/core.js', '/app/js/screens_a.js', '/app/js/screens_b.js', '/app/js/screens_c.js', '/app/js/screens_d.js',
   '/app/js/releases.js', '/app/js/live.js', '/app/js/build.js', '/app/js/mobile.js'];

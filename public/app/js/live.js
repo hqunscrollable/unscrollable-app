@@ -159,11 +159,23 @@
       + '<label class="sm mut row" style="gap:6px">Stage<select data-chg="lstage" data-id="' + esc(l.id) + '">' + stageOpts + '</select></label>'
       + '<label class="sm mut row" style="gap:6px">Signal<select data-chg="ltag" data-id="' + esc(l.id) + '">' + opts(TAGS, l.tag) + '</select></label>'
       + (opt.owner ? '<label class="sm mut row" style="gap:6px">Owner<select data-chg="lowner" data-id="' + esc(l.id) + '">' + opts(OWN, l.owner) + '</select></label><label class="sm mut row" style="gap:6px">List<select data-chg="llist" data-id="' + esc(l.id) + '">' + opts(LISTS, l.list || 'icp') + '</select></label>' : '') + '</div>'
+      + (opt.drawer ? detailsForm(l) : '')
       + '<details' + (opt.drawer ? ' open' : '') + ' style="margin-top:8px"><summary class="sm mut" style="cursor:pointer">Notes and history</summary><div class="stack" style="gap:8px;margin-top:8px">'
       + (l.why_fit ? '<div class="sm"><b>Why they fit:</b> ' + esc(l.why_fit) + '</div>' : '')
       + '<div class="row"><input id="ln_' + esc(l.id) + '" placeholder="Add a note about the conversation" style="flex:1;min-width:200px"><button type="button" class="btn sm" data-act="lnote" data-id="' + esc(l.id) + '">Save note</button></div>'
       + (evs.length ? '<div class="list">' + evs.map(function (e) { return '<div class="sm"><span class="mut">' + esc((e.at || '').slice(0, 10)) + ' ' + esc(e.by || '') + ':</span> ' + esc(e.detail || '') + '</div>'; }).join('') + '</div>' : '')
       + '</div></details></div>';
+  }
+
+  function detailsForm(l) {
+    var id = esc(l.id);
+    return '<div class="card" style="margin-top:10px"><h3 style="margin-bottom:8px">Details</h3><div class="stack" style="gap:10px">'
+      + '<div class="row"><label class="f" style="flex:1;min-width:160px">Name<input id="ld_name_' + id + '" value="' + esc(l.name || '') + '" maxlength="120"></label>'
+      + '<label class="f" style="flex:1;min-width:160px">Company<input id="ld_co_' + id + '" value="' + esc(l.company || '') + '" maxlength="120"></label></div>'
+      + '<label class="f">LinkedIn link<input id="ld_url_' + id + '" value="' + esc(l.profile_url || '') + '" placeholder="https://www.linkedin.com/in/..." inputmode="url" maxlength="300"></label>'
+      + '<label class="f">X link<input id="ld_x_' + id + '" value="' + esc(l.x_url || '') + '" placeholder="https://x.com/name" inputmode="url" maxlength="200"></label>'
+      + '<label class="f">Industry<input id="ld_ind_' + id + '" value="' + esc(l.industry || '') + '" maxlength="80"></label>'
+      + '<div class="row"><button type="button" class="btn pri sm" data-act="ldetsave" data-id="' + id + '">Save details</button></div></div></div>';
   }
 
   /* ---------- FOLLOW-UPS ---------- */
@@ -710,6 +722,15 @@
   A.ldone = function (el) {
     var id = el.getAttribute('data-id'), l = L.leads.filter(function (x) { return x.id === id; })[0]; if (!l) return;
     run(api('POST', '/leads/' + id + '/event', { kind: 'action', detail: 'Did: ' + suggest(l) }).then(function () { return api('PATCH', '/leads/' + id, { next_due: addDays(L.today, 1) }); }), 'Logged. Next action tomorrow.');
+  };
+  A.ldetsave = function (el) {
+    var id = el.getAttribute('data-id'), l = L.leads.filter(function (x) { return x.id === id; })[0]; if (!l) return;
+    var f = [['name', 'ld_name_', l.name], ['company', 'ld_co_', l.company], ['profile_url', 'ld_url_', l.profile_url], ['x_url', 'ld_x_', l.x_url], ['industry', 'ld_ind_', l.industry]], b = {}, n = 0;
+    f.forEach(function (r) { var v = val(r[1] + id); if (v !== (r[2] || '')) { b[r[0]] = v; n++; } });
+    if (b.name === '') { U.toast('A lead needs a name.'); return; }
+    if (!n) { U.toast('Nothing changed.'); return; }
+    var urlChanged = 'profile_url' in b && b.profile_url;
+    run(api('PATCH', '/leads/' + id, b), 'Details saved.').then(function () { if (urlChanged && !l.avatar_v) api('POST', '/avatar/lead/' + id + '/fetch', {}).then(reload).catch(function () {}); });
   };
   A.lsnooze = function (el) { var id = el.getAttribute('data-id'); run(api('PATCH', '/leads/' + id, { next_due: addDays(L.today, 1) }), 'Moved to tomorrow.'); };
   A.lnote = function (el) { var id = el.getAttribute('data-id'), t = val('ln_' + id); if (!t) return; run(api('POST', '/leads/' + id + '/event', { kind: 'note', detail: t }), 'Note saved.'); };

@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.4.1', date: '4 Nov 2026', title: 'Edit a lead after you save it',
+    what: 'The lead panel now has a Details block: name, company, LinkedIn link, X link and industry, with a Save details button.',
+    does: 'Change any of them any time, on desktop and phone. A bad X or LinkedIn link is refused with a plain message. A new LinkedIn link also fetches the photo.',
+    friction: 'No more running SQL to fix a company name or add a missing X link.',
+    where: 'Leads, tap a lead, then Details.' },
   { v: '1.4.0', date: '4 Nov 2026', title: 'The phone app: tabs, Dashboard, Leads, Tasks, Watchlist',
     what: 'On a phone the app now has a slim header and a bottom tab bar: Dashboard, Leads, Tasks, More. Dashboard has a Do this first card, the Watchlist ring, colour tiles, Engage and follow-ups. Leads has search, Due / All / Away, owner chips and groups by urgency. Tasks has a quick add box, owner chips and groups (Overdue, Due today, Doing, To do, Blocked). The Watchlist has a progress ring, Today / All people / Add people, and one big Commented button per person.',
     does: 'More lists every other screen, with the live ones first. The offline bar is red. Desktop looks the same as before.',
