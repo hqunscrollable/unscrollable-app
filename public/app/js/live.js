@@ -374,6 +374,7 @@
   U.screens.account = function () {
     var h = head('My account', 'Signed in as ' + esc(ME.name) + ' (' + esc(ME.login_id) + ').');
     h += '<div class="card" style="margin-bottom:14px"><h3 style="margin-bottom:8px">Your photo</h3><div class="row" style="gap:14px;align-items:center;flex-wrap:wrap"><span class="avbig">' + av('user', { id: ME.id, name: ME.name, avatar_v: ME.avatar_v }) + '</span><div class="stack" style="gap:8px;flex:1 1 220px"><div class="sm">Shows in the menu so you can see who is signed in. If you add no photo, you get coloured initials.</div><div class="row" style="gap:8px"><button type="button" class="btn" data-act="photo" data-kind="user" data-id="' + esc(ME.id) + '">' + (ME.avatar_v ? 'Change photo' : 'Add photo') + '</button>' + (ME.avatar_v ? '<button type="button" class="btn" data-act="photodel">Remove</button>' : '') + '</div></div></div></div>';
+    h += '<div class="card" style="margin-bottom:14px"><h3 style="margin-bottom:8px">Save LinkedIn photos with one click</h3><div class="stack" style="gap:8px"><div class="sm"><b>Once:</b> drag this button to your bookmarks bar (press Ctrl+Shift+B to show it). <b>Then:</b> on anyone\'s LinkedIn profile, click it. Their photo is saved to that person in Leads or the Watchlist.</div><div class="row" style="gap:10px;align-items:center;flex-wrap:wrap"><a class="btn pri" href="' + esc(bmCode()) + '" title="Drag me to your bookmarks bar. Do not click me here." onclick="return false">Save to UNS</a><button type="button" class="btn sm" data-act="bmcopy">Copy button code</button></div><div class="sm mut">Cannot drag it? Add any bookmark, then paste the copied code as its address.</div></div></div>';
     if (U.installCard) h += U.installCard();
     h += '<div class="grid g2" style="align-items:start"><div class="card"><h3 style="margin-bottom:8px">Change password</h3><div class="stack" style="gap:10px"><label class="f">Current password<input id="pw_cur" type="password" autocomplete="current-password"></label><label class="f">New password (12 characters or more)<input id="pw_new" type="password" autocomplete="new-password"></label><div><button type="button" class="btn pri" data-act="pwsave">Change password</button></div></div></div>'
       + '<div class="card"><h3 style="margin-bottom:8px">Two-factor sign-in</h3>' + (ME.totp_enabled ? '<div class="banner">Two-factor is on for your account. On the sign-in page you can type a recovery code in place of the authenticator code, and tick Remember this device to skip the code on this computer for 30 days.</div>' : '<div class="stack" style="gap:10px"><div class="sm">Founders use an authenticator app. Set it up now: press the button, add the key to your app, then type the 6-digit code to confirm.</div>' + (S.ui.twofa ? '<div class="card tight"><div class="sm mut">Key (type it into your authenticator app)</div><code style="overflow-wrap:anywhere;font-size:15px">' + esc(S.ui.twofa.secret) + '</code></div><label class="f">6-digit code<input id="tf_code" inputmode="numeric" maxlength="7" autocomplete="one-time-code"></label><div><button type="button" class="btn pri" data-act="tfon">Turn on</button></div>' : '<div><button type="button" class="btn pri" data-act="tfsetup">Start setup</button></div>') + '</div>') + '</div></div>';
@@ -437,6 +438,7 @@
     return '<div class="item" style="align-items:center;flex-wrap:wrap' + (done ? ';opacity:.7' : '') + '">' + av('watch', w, true) + '<div class="mn"><div class="t">' + nm + '</div><div class="d">' + esc(lab(W_KIND, w.kind)) + '. Last commented ' + wago(w) + '. ' + w.comment_count + ' total.' + (w.lead_id ? ' Now a lead.' : '') + '</div></div>'
       + '<div class="row" style="gap:6px;flex-wrap:wrap">'
       + (opt.full ? '<select data-chg="wowner" data-id="' + esc(w.id) + '" aria-label="Owner">' + opts(OWN, w.owner) + '</select><select data-chg="wkind" data-id="' + esc(w.id) + '" aria-label="Type">' + opts(W_KIND, w.kind) + '</select>' : '')
+      + cpb(w)
       + (done ? '<button type="button" class="btn sm" data-act="wundo" data-id="' + esc(w.id) + '">Undo</button>'
         : '<button type="button" class="btn pri sm" data-act="wdone" data-id="' + esc(w.id) + '">Commented</button>')
       + (!w.lead_id ? '<button type="button" class="btn sm" data-act="wlead" data-id="' + esc(w.id) + '">Make lead</button>' : '')
@@ -524,16 +526,33 @@
       run(api('PUT', '/avatar/' + t.kind + '/' + t.id, { data: c.toDataURL('image/jpeg', 0.85) }).then(function (r) { if (t.kind === 'user' && r && r.v) ME.avatar_v = r.v; return r; }), 'Photo saved.');
     }).catch(function () { U.toast('That file is not an image.'); });
   }
+  function bmCode() {
+    var app = location.origin;
+    var f = function () {
+      try {
+        var m = document.querySelector('main') || document, c = [].slice.call(m.querySelectorAll('img')).filter(function (i) { return /licdn\.com/.test(i.src) && /profile-(displayphoto|framedphoto)/.test(i.src); }).sort(function (a, b) { return b.naturalWidth - a.naturalWidth; })[0];
+        var s = c ? c.src : ((document.querySelector('meta[property="og:image"]') || {}).content || '');
+        var p = location.pathname.match(/^\/in\/[^\/]+/);
+        if (!p || !s) { alert('Open a LinkedIn profile first, then click Save to UNS.'); return; }
+        window.open('APP/app/photo.html#u=' + encodeURIComponent(location.origin + p[0]) + '&i=' + encodeURIComponent(s), 'uns_photo', 'width=420,height=300');
+      } catch (e) { alert('Save to UNS: ' + e.message); }
+    };
+    return 'javascript:(' + f.toString().replace('APP', app).replace(/\s*\n\s*/g, '') + ')()';
+  }
+  A.bmcopy = function (el) { U.copy(bmCode(), el); };
   A.photodel = function () { run(api('DELETE', '/avatar/user/' + ME.id).then(function (r) { ME.avatar_v = null; return r; }), 'Photo removed.'); };
   A.photo = function (el) {
     S.ui.ptarget = { kind: el.getAttribute('data-kind'), id: el.getAttribute('data-id'), at: Date.now() };
-    U.toast(touchy() ? 'Choose a photo from your phone.' : 'Choose an image, or press Ctrl+V to paste a screenshot of their photo.');
-    photoInput().click();
+    if (touchy()) { U.toast('Choose a photo from your phone.'); photoInput().click(); return; }
+    var again = S.ui.pwait && S.ui.pwait.id === S.ui.ptarget.id && Date.now() - S.ui.pwait.at < 10000;
+    if (again) { photoInput().click(); return; }
+    S.ui.pwait = { id: S.ui.ptarget.id, at: Date.now() };
+    U.toast('<b>Press Ctrl+V now</b> to paste their photo (on LinkedIn: right-click the photo, Copy image). Click the face again to choose a file instead.');
   };
   document.addEventListener('paste', function (e) {
-    var t = S.ui.ptarget; if (!t || Date.now() - t.at > 600000) return;
+    var t = S.ui.ptarget; if (!t || Date.now() - t.at > 600000) t = S.ui.lopen ? { kind: 'lead', id: S.ui.lopen, at: Date.now() } : null; if (!t) return;
     var it = (e.clipboardData && e.clipboardData.items) || [];
-    for (var i = 0; i < it.length; i++) if (it[i].type.indexOf('image/') === 0) { e.preventDefault(); sendPhoto(it[i].getAsFile()); return; }
+    for (var i = 0; i < it.length; i++) if (it[i].type.indexOf('image/') === 0) { e.preventDefault(); S.ui.ptarget = t; sendPhoto(it[i].getAsFile()); return; }
   });
   A.pfetch = function (el) {
     U.toast('Looking for the photo.');

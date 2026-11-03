@@ -1,22 +1,21 @@
 {
   "updated": "2026-11-04",
-  "live": "1.3.3",
-  "built": "1.3.5",
-  "next": "1.3.6",
+  "live": "1.3.5",
+  "built": "1.3.7",
+  "next": "1.3.8",
   "pending_on_pc": [
-    "Apply unscrollable-1.3.5-dropin.zip (includes 1.3.4), git add -A, commit, push",
-    "Run the migrations: npx wrangler d1 migrations apply uns-app --remote (0008 user photo, 0009 X link), then npx wrangler deploy",
-    "Run the people import: wrangler d1 execute uns-app --remote --file=import-people-2026-11-04.sql (replaces the 20 company rows with 34 founders)",
-    "Developer: switch off any Claude access code that was pasted in chat"
+    "Apply unscrollable-1.3.7-dropin.zip (includes 1.3.6), git add -A, commit, push, then npx wrangler deploy (no migration)",
+    "Developer: switch off any Claude access code that was pasted in chat",
+    "Check on the phone: menu fold, faces, company chips, Copy link and X buttons"
   ],
-  "right_now": "1.3.3 is live. 1.3.5 (company markers, includes 1.3.4 faces) is built and tested, waiting for Tabish to deploy it and run the people import.",
+  "right_now": "1.3.5 is live. 1.3.6 (paste a photo) and 1.3.7 (Save to UNS button for LinkedIn photos) are built and tested, waiting for Tabish to deploy.",
   "blocked_on_tabish": [
-    "Deploy 1.3.5 (needs the migration)",
     "Pick mobile look: playful or premium (needed for the screen pass)",
     "Watchlist for three founders: restate in one sentence",
     "Founders Desk: personal or shared",
     "Founder Traits: approve rebuild direction",
-    "Ali and Mehak: sign in and save recovery codes"
+    "Ali and Mehak: sign in and save recovery codes",
+    "Set next action dates on the 34 new leads; confirm which founders got a request"
   ],
   "next_three": [
     "Mobile screen pass using the saved prototype (needs the look decision)",
@@ -116,13 +115,13 @@
     },
     {
       "name": "Faces: your photo and coloured initials",
-      "state": "Tested",
+      "state": "Deployed",
       "ver": "1.3.4",
-      "note": "Migration 0008. Deploy pending."
+      "note": "Migration 0008."
     },
     {
       "name": "Company markers on leads",
-      "state": "Tested",
+      "state": "Deployed",
       "ver": "1.3.5",
       "note": "Same colour chip and count for people at one company, a Same company list in the lead card, a Copy link button on each lead, and a remembered light or dark choice, an X link field on leads (migration 0009), and foldable menu groups."
     },
@@ -151,6 +150,18 @@
       "name": "Client door and approvals",
       "state": "Designed",
       "ver": "later"
+    },
+    {
+      "name": "Paste a photo with Ctrl+V",
+      "state": "Tested",
+      "ver": "1.3.6",
+      "note": "No migration."
+    },
+    {
+      "name": "Save to UNS button for LinkedIn photos",
+      "state": "Tested",
+      "ver": "1.3.7",
+      "note": "Untested on a real signed-in LinkedIn. Falls back to copy and Ctrl+V. No migration."
     }
   ],
   "risks": [
@@ -160,6 +171,16 @@
     "Offline mode shows saved data only. Changes made offline do not save."
   ],
   "changelog": [
+    {
+      "v": "1.3.7",
+      "date": "2026-11-04",
+      "text": "Save to UNS: a bookmarks-bar button that saves a LinkedIn profile photo to the matching lead or Watchlist person, via the new /avatar/capture API and /app/photo.html."
+    },
+    {
+      "v": "1.3.6",
+      "date": "2026-11-04",
+      "text": "Paste a LinkedIn photo: open a lead, Ctrl+V. Desktop face click no longer opens a file window first."
+    },
     {
       "v": "1.3.5",
       "date": "2026-11-04",

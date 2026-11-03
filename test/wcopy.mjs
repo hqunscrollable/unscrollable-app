@@ -1,0 +1,17 @@
+import { chromium } from 'playwright';
+const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) process.exitCode = 1; };
+const B = 'http://localhost:8787', PW = 'test-pass-123456', H = { 'x-uns': '1', 'content-type': 'application/json' };
+const cookie = (await fetch(B + '/app/api/login', { method: 'POST', headers: H, body: JSON.stringify({ login_id: 'tabish', password: PW }) })).headers.getSetCookie()[0].split(';')[0];
+await fetch(B + '/app/api/watch', { method: 'POST', headers: { ...H, cookie }, body: JSON.stringify({ items: [{ name: 'Watch Copy Test', profile_url: 'https://www.linkedin.com/in/watch-copy-test/' }], kind: 'outlier', owner: 'Tabish' }) });
+const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 1200, height: 900 } }); await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
+const pg = await ctx.newPage(); const errs = []; pg.on('pageerror', e => errs.push(String(e)));
+await pg.goto(B + '/app/login.html'); await pg.fill('#id', 'tabish'); await pg.fill('#pw', PW); await pg.click('#go'); await pg.waitForURL('**/app/');
+await pg.waitForSelector('#nav [data-id=leads]', { state: 'attached' });
+await pg.evaluate(() => { location.hash = '#leads'; }); await pg.waitForTimeout(600);
+await pg.click('[data-act=llistsel][data-id=watch]'); await pg.waitForTimeout(800);
+const b = await pg.$('.item:has([data-act=wdone]) [data-act=lcopy]'); ok('Copy link button on a Watchlist row', !!b);
+await b.click(); await pg.waitForTimeout(200);
+ok('button says Copied', /Copied/.test(await b.textContent()));
+ok('the link is on the clipboard', (await pg.evaluate(() => navigator.clipboard.readText())) === (await b.getAttribute('data-url')) && /^https:\/\/(www\.)?linkedin\.com\/in\//.test(await pg.evaluate(() => navigator.clipboard.readText())));
+ok('no page errors', errs.length === 0);
+await br.close();

@@ -857,9 +857,15 @@ async function fetchPhoto(url) {
     const html = (await r.text()).slice(0, 300000);
     const m = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i.exec(html) || /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i.exec(html);
     if (!m) return null;
-    let u; try { u = new URL(m[1].replace(/&amp;/g, '&')); } catch { return null; }
+    return await fetchImg(m[1].replace(/&amp;/g, '&'));
+  } catch { return null; }
+}
+// Download one LinkedIn CDN photo (https, licdn.com only) and return it ready to store, or null.
+async function fetchImg(src) {
+  try {
+    let u; try { u = new URL(src); } catch { return null; }
     if (u.protocol !== 'https:' || !/(^|\.)licdn\.com$/i.test(u.hostname)) return null;
-    const ir = await fetch(u.href, { signal: AbortSignal.timeout(5000) });
+    const ir = await fetch(u.href, { signal: AbortSignal.timeout(6000) });
     const ct = (ir.headers.get('content-type') || '').split(';')[0];
     if (!ir.ok || !/^image\/(jpeg|png|webp)$/.test(ct)) return null;
     const buf = new Uint8Array(await ir.arrayBuffer());
@@ -868,6 +874,25 @@ async function fetchPhoto(url) {
     const b64 = btoa(s);
     return b64.length <= AV_MAX ? { mime: ct, b64 } : null;
   } catch { return null; }
+}
+function liSlug(u) {
+  try { const x = new URL(String(u)); if (!/(^|\.)linkedin\.com$/i.test(x.hostname)) return null; const m = /^\/in\/([^/]+)/i.exec(x.pathname); return m ? decodeURIComponent(m[1]).toLowerCase() : null; } catch { return null; }
+}
+// The "Save to UNS" button on LinkedIn sends the profile link and the photo link. Save the photo on every lead or Watchlist person with that profile.
+async function avatarCapture(env, user, req) {
+  const b = await readJson(req);
+  const slug = liSlug(b.profile_url);
+  if (!slug) return json({ ok: false, reason: 'profile' });
+  const hits = [];
+  for (const kind of ['lead', 'watch']) {
+    const rows = (await env.DB.prepare(`SELECT id, name, profile_url FROM ${AV_TABLE[kind]} WHERE profile_url LIKE '%linkedin.com/in/%'`).all()).results;
+    for (const r of rows) if (liSlug(r.profile_url) === slug) hits.push({ kind, id: r.id, name: r.name });
+  }
+  if (!hits.length) return json({ ok: false, reason: 'nomatch' });
+  const got = await fetchImg(String(b.img_url || ''));
+  if (!got) return json({ ok: false, reason: 'image', names: hits.map(h => h.name) });
+  for (const h of hits) { await avatarSave(env, h.kind, h.id, got.mime, got.b64); await log(env, user.login_id, 'avatar_captured', h.kind, h.id); }
+  return json({ ok: true, names: hits.map(h => h.name) });
 }
 async function avatarFetch(env, user, kind, rid) {
   if (!AV_TABLE[kind]) return bad('Not found.', 404);
@@ -928,6 +953,7 @@ async function route(req, env, ctx) {
     // Contractor and client accounts can sign in and manage their own login, but see no founder data until their own screens exist.
     if (user.role !== 'founder') return bad('This account has no access to the founders app yet.', 403);
     if (api === '/data' && method === 'GET') return allData(env, user);
+    if (api === '/avatar/capture' && method === 'POST') return avatarCapture(env, user, req);
     if ((m = api.match(/^\/avatar\/(lead|watch|user)\/([\w]+)$/))) {
       if (method === 'GET') return avatarGet(env, m[1], m[2]);
       if (method === 'PUT') return avatarPut(env, user, m[1], m[2], req);

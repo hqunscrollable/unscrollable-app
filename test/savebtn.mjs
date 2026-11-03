@@ -1,0 +1,27 @@
+import { chromium } from 'playwright';
+const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) process.exitCode = 1; };
+const B = 'http://localhost:8787', PW = 'test-pass-123456', H = { 'x-uns': '1', 'content-type': 'application/json' };
+const cookie = (await fetch(B + '/app/api/login', { method: 'POST', headers: H, body: JSON.stringify({ login_id: 'tabish', password: PW }) })).headers.getSetCookie()[0].split(';')[0];
+const post = async (b) => (await fetch(B + '/app/api/avatar/capture', { method: 'POST', headers: { ...H, cookie }, body: JSON.stringify(b) })).json();
+ok('not a LinkedIn link is refused', (await post({ profile_url: 'https://example.com/in/x', img_url: 'https://media.licdn.com/a.jpg' })).reason === 'profile');
+ok('person not in the app is refused', (await post({ profile_url: 'https://www.linkedin.com/in/nobody-here-xyz', img_url: 'https://media.licdn.com/a.jpg' })).reason === 'nomatch');
+const m = await post({ profile_url: 'https://www.linkedin.com/in/ananth-s', img_url: 'https://evil.example/a.jpg' });
+ok('matches by profile (ignoring the trailing slash) and refuses a non-LinkedIn image host', m.reason === 'image' && m.names.includes('Ananth Sankaralingam'));
+const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 1200, height: 900 } });
+const pg = await ctx.newPage();
+await pg.goto(B + '/app/login.html'); await pg.fill('#id', 'tabish'); await pg.fill('#pw', PW); await pg.click('#go'); await pg.waitForURL('**/app/');
+await pg.waitForSelector('#nav [data-id=leads]', { state: 'attached' });
+await pg.evaluate(() => { location.hash = '#account'; }); await pg.waitForTimeout(600);
+const href = await pg.$eval('a:has-text("Save to UNS")', a => a.getAttribute('href')).catch(() => null);
+ok('the button is on My account or Settings', !!href && href.startsWith('javascript:'));
+// mock LinkedIn page
+const li = await ctx.newPage();
+await li.route('https://www.linkedin.com/**', r => r.fulfill({ contentType: 'text/html', body: '<html><body><header><img src="https://media.licdn.com/x/profile-displayphoto-shrink_100_100/me.jpg" width=24></header><main><img id=p src="https://media.licdn.com/x/profile-displayphoto-shrink_400_400/ananth.jpg?e=1&t=2" width=200 height=200></main></body></html>' }));
+await li.route('https://media.licdn.com/**', r => r.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') }));
+await li.goto('https://www.linkedin.com/in/ananth-s/details/experience/');
+await li.waitForTimeout(300);
+const [pop] = await Promise.all([ctx.waitForEvent('page'), li.evaluate(h => { location.href; window.eval(decodeURIComponent(h.replace(/^javascript:/, ''))); }, href)]);
+await pop.route('**/app/api/avatar/capture', r => { const b = JSON.parse(r.request().postData()); ok('popup sends the profile link without sub-page and the main-photo (not the header one)', b.profile_url === 'https://www.linkedin.com/in/ananth-s' && /400_400\/ananth/.test(b.img_url)); r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, names: ['Ananth Sankaralingam'] }) }); });
+await pop.waitForLoadState(); await pop.waitForTimeout(1200).catch(() => {});
+ok('popup opened the app photo page', /\/app\/photo\.html/.test(pop.url()) || pop.isClosed());
+await br.close();

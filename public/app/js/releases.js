@@ -1,6 +1,17 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.3.7', date: '4 Nov 2026', title: 'Save LinkedIn photos with one click',
+    what: 'A small Save to UNS button for your browser bar. On any LinkedIn profile you click it and their photo is saved to that person in Leads or the Watchlist.',
+    does: 'Once: open My account, drag the Save to UNS button to your bookmarks bar. After that, one click on a LinkedIn profile does the rest. It matches the person by their profile link. If LinkedIn blocks the download, the window tells you to copy the photo and press Ctrl+V on their card.',
+    friction: 'No copying, no switching, no file window. Ali and Mehak set it up once and it is one click per person.',
+    where: 'My account, Save LinkedIn photos with one click.',
+    more: 'Also: the Copy link button is now on every Watchlist row too.' },
+  { v: '1.3.6', date: '4 Nov 2026', title: 'Paste a LinkedIn photo in three steps',
+    what: 'LinkedIn does not let other apps fetch profile photos, so the quickest way is your own browser: copy the photo there and paste it here.',
+    does: 'On LinkedIn, right-click their photo and choose Copy image. In the app, open the lead and press Ctrl+V. The photo is saved to that lead. You can also click the face, then press Ctrl+V. On a phone the face still opens your photos.',
+    friction: 'No saving files and no file window. Open the card, paste, done.',
+    where: 'Leads: open a lead, then Ctrl+V with a photo copied.' },
   { v: '1.3.5', date: '4 Nov 2026', title: 'Company markers on leads',
     what: 'People who work at the same company now carry the same coloured chip with the company name. If a company has more than one person on the list, the chip shows how many.',
     does: 'The chip shows on the leads board, Today, Follow-ups and in the lead card. Open a lead and a Same company box lists the other people there, each with an Open button.',
