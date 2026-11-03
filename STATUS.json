@@ -1,14 +1,14 @@
 {
   "updated": "2026-11-04",
-  "live": "1.3.10",
+  "live": "1.4.0",
   "built": "1.4.0",
   "next": "1.4.1",
   "pending_on_pc": [
-    "Run the 1.4.0 deploy from F:\\unscrollable\\app-push\\unscrollable-app. No migration.",
+    "Deploy the sw.js fix (unscrollable-1.4.0-swfix.zip): the service worker file went out empty in 1.3.10 and 1.4.0",
     "Drag the new Save to UNS button (1.3.9) and send the message the window shows for Claire",
     "Developer: switch off any Claude access code that was pasted in chat"
   ],
-  "right_now": "1.3.10 is live. 1.4.0 (phone shell: tabs, Dashboard, Leads, Tasks, Watchlist) is built and tested, waiting for Tabish to deploy.",
+  "right_now": "1.4.0 is live (phone app). The service worker file was empty in 1.3.10 and 1.4.0, so offline and fast reopen were off. Fix built, waiting for Tabish to deploy.",
   "blocked_on_tabish": [
     "Pick mobile look: playful or premium (needed for the screen pass)",
     "Watchlist for three founders: restate in one sentence",
@@ -192,7 +192,8 @@
     "Email depends on Resend: the API key lives in a Worker secret and the domain records live in Cloudflare DNS.",
     "This file is only accurate if every build updates it (rule in CLAUDE.md).",
     "iPhone may still clear home-screen app data when unused. Cannot be promised away.",
-    "Offline mode shows saved data only. Changes made offline do not save."
+    "Offline mode shows saved data only. Changes made offline do not save.",
+    "Service worker sw.js shipped empty in 1.3.10 and 1.4.0 (a bad file write). Restored from 1.3.9. Check file sizes before zipping."
   ],
   "changelog": [
     {
