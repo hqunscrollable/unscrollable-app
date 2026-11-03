@@ -1,0 +1,15 @@
+import { chromium } from 'playwright';
+const ok=(n,c)=>{console.log((c?'PASS ':'FAIL ')+n);if(!c)process.exitCode=1};
+const B='http://localhost:8787';
+const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:1100,height:900}});const pg=await ctx.newPage();const errs=[];pg.on('pageerror',e=>errs.push(String(e)));
+await pg.goto(B+'/app/login.html');await pg.fill('#id','tabish');await pg.fill('#pw','test-pass-123456');await pg.click('#go');await pg.waitForURL('**/app/**');
+await pg.waitForSelector('[data-act=nav]');
+await pg.click('[data-act=nav][data-id=tasks]');await pg.waitForTimeout(400);
+await pg.reload();await pg.waitForSelector('[data-act=nav]');await pg.waitForTimeout(500);
+ok('reload keeps Tasks',(await pg.textContent('#topttl'))==='Tasks');
+await pg.goto(B+'/app/');await pg.waitForSelector('[data-act=nav]');await pg.waitForTimeout(500);
+ok('opening /app/ with no hash returns to Tasks',(await pg.textContent('#topttl'))==='Tasks');
+await pg.click('[data-act=nav][data-id=leads]');await pg.waitForTimeout(400);
+const sw=await pg.$('[data-act=lview]');
+ok('no page errors',errs.length===0);
+await b.close();

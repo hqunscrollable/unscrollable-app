@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.3.10', date: '4 Nov 2026', title: 'Refresh keeps your place',
+    what: 'F5, Ctrl+F5 and reopening the app now bring you back to the screen you were on, with its tab and filters.',
+    does: 'The app remembers the last screen on this device, plus the Leads view and owner filter, Tasks view, Watchlist tab and search, and Follow-ups list. An open card or form is not restored.',
+    friction: 'No more walking back to Leads after every refresh.',
+    where: 'Everywhere. Nothing to set up.' },
   { v: '1.3.9', date: '4 Nov 2026', title: 'Save to UNS reads names more reliably',
     what: 'The Save to UNS button now takes the name from the page title, cuts off headlines, credentials and the notification count, and tells you in the window what name it read.',
     does: 'After you click it, the window says either Name fixed to the real name, or why it did not change (could not read a name, or the name was typed by hand). Drag the new button from My account to your bookmarks bar again.',

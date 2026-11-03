@@ -10,12 +10,12 @@ await fetch(B + '/app/api/reset', { method: 'POST', headers: H, body: JSON.strin
 const login = (await (await fetch(B + '/app/api/admin/users', { headers: { cookie: adm } })).json()).users.filter(u => u.name === 'WN').pop().login_id;
 await pg.goto(B + '/app/login.html'); await pg.fill('#id', login); await pg.fill('#pw', PW); await pg.click('#go'); await pg.waitForURL('**/app/');
 await pg.waitForSelector('[data-act=nav]'); await pg.waitForTimeout(500);
-ok('banner shows on Today', /New in 1\.3\.9/.test(await pg.textContent('#main')));
+ok('banner shows on Today', /New in 1\.3\.10/.test(await pg.textContent('#main')));
 await pg.screenshot({ path: '/tmp/wn_banner.png' });
 await pg.click('[data-act=relseen]'); await pg.waitForTimeout(400);
-ok('Got it hides banner', !/New in 1\.3\.9/.test(await pg.textContent('#main')));
+ok('Got it hides banner', !/New in 1\.3\.10/.test(await pg.textContent('#main')));
 await pg.reload(); await pg.waitForSelector('[data-act=nav]'); await pg.waitForTimeout(500);
-ok('stays hidden after reload (saved on server)', !/New in 1\.3\.9/.test(await pg.textContent('#main')));
+ok('stays hidden after reload (saved on server)', !/New in 1\.3\.10/.test(await pg.textContent('#main')));
 await pg.click('[data-act=nav][data-id=whatsnew]'); await pg.waitForTimeout(300);
 const t = await pg.textContent('#main');
 ok('page lists all releases with three parts', /How it cuts friction/.test(t) && /1\.2\.2/.test(t) && /1\.3\.0/.test(t));
