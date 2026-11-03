@@ -12,8 +12,10 @@ export async function sendMail(env, { to, subject, text }, connectFn) {
   const user = env.SMTP_USER || 'hq@unscrollable.studio';
   const connect = connectFn || (await import('cloudflare:sockets')).connect;
   const sock = connect({ hostname: host, port }, { secureTransport: 'on' });
+  let stage = 'connecting to ' + host + ':' + port;
   const w = sock.writable.getWriter(), r = sock.readable.getReader();
   let buf = '';
+  const say = (e) => new Error(stage + ': ' + String((e && e.message) || e).slice(0, 140));
   const readReply = async () => {
     for (;;) {
       const lines = buf.split('\r\n');
@@ -37,19 +39,20 @@ export async function sendMail(env, { to, subject, text }, connectFn) {
     'MIME-Version: 1.0', 'Content-Type: text/plain; charset=utf-8', 'Content-Transfer-Encoding: base64', '', body
   ].join('\r\n');
   const run = async () => {
-    await step(null, '220');
-    await step('EHLO unscrollable.studio', '250');
-    await step('AUTH LOGIN', '334');
-    await step(b64(user), '334');
-    await step(b64(env.SMTP_PASS), '235');
-    await step('MAIL FROM:<' + user + '>', '250');
-    await step('RCPT TO:<' + clean(to) + '>', '250');
-    await step('DATA', '354');
-    await step(msg + '\r\n.', '250');
+    if (sock.opened) { try { await sock.opened; } catch (e) { throw say(e); } }
+    stage = 'waiting for greeting'; await step(null, '220');
+    stage = 'hello'; await step('EHLO unscrollable.studio', '250');
+    stage = 'login'; await step('AUTH LOGIN', '334');
+    stage = 'login user'; await step(b64(user), '334');
+    stage = 'login password'; await step(b64(env.SMTP_PASS), '235');
+    stage = 'sender'; await step('MAIL FROM:<' + user + '>', '250');
+    stage = 'recipient'; await step('RCPT TO:<' + clean(to) + '>', '250');
+    stage = 'data'; await step('DATA', '354');
+    stage = 'sending message'; await step(msg + '\r\n.', '250');
     try { await w.write(enc.encode('QUIT\r\n')); } catch {}
   };
   try {
-    await Promise.race([run(), new Promise((_, rej) => setTimeout(() => rej(new Error('Mail server timed out')), 12000))]);
+    await Promise.race([run().catch((e) => { throw /^Mail server said|^connecting|^waiting|^hello|^login|^sender|^recipient|^data|^sending/.test(e.message) ? e : say(e); }), new Promise((_, rej) => setTimeout(() => rej(new Error('Mail server timed out at: ' + stage)), 12000))]);
   } finally {
     try { sock.close(); } catch {}
   }
