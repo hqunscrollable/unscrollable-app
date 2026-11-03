@@ -8,12 +8,13 @@ export const emailOk = (e) => /^[^\s@<>",;:]{1,64}@[^\s@<>",;:]{1,190}\.[a-z]{2,
 // Preferred path: Resend over HTTPS. Workers cannot reach Hostinger SMTP, so this is the one that works.
 // Secrets and vars: RESEND_API_KEY (secret), RESEND_FROM (optional, e.g. "Unscrollable <hq@unscrollable.studio>" once the domain is verified).
 async function sendResend(env, { to, subject, text }) {
-  const from = env.RESEND_FROM || 'Unscrollable <onboarding@resend.dev>';
+  const from = String(env.RESEND_FROM || 'Unscrollable <onboarding@resend.dev>').trim();
+  const key = String(env.RESEND_API_KEY).trim().replace(/^["']|["']$/g, '');
   let res;
   try {
     res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { authorization: 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' },
+      headers: { authorization: 'Bearer ' + key, 'content-type': 'application/json', 'user-agent': 'unscrollable-app/1.0', accept: 'application/json' },
       body: JSON.stringify({ from, to: [clean(to)], subject: clean(subject), text: String(text) })
     });
   } catch (e) { throw new Error('Could not reach Resend: ' + String((e && e.message) || e).slice(0, 100)); }
@@ -24,7 +25,7 @@ async function sendResend(env, { to, subject, text }) {
       try { const j = JSON.parse(raw); m = (typeof j.message === 'string' && j.message) || (typeof j.error === 'string' && j.error) || (j.error && j.error.message) || j.name || raw; }
       catch { m = raw; }
     } catch {}
-    throw new Error('Resend said ' + res.status + (m ? ': ' + clean(typeof m === 'string' ? m : JSON.stringify(m)).slice(0, 200) : ' (no reason given)'));
+    throw new Error('Resend said ' + res.status + (m ? ': ' + clean(typeof m === 'string' ? m : JSON.stringify(m)).slice(0, 200) : ' (no reason given)') + ' [key ' + key.length + ' chars, starts ' + key.slice(0, 3) + ', to ' + clean(to) + ', server ' + (res.headers.get('server') || '?') + ', type ' + (res.headers.get('content-type') || '?') + ']');
   }
 }
 
