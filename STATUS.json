@@ -1,22 +1,18 @@
 {
   "updated": "2026-11-02",
-  "live": "1.2.3",
+  "live": "1.3.2",
   "built": "1.3.2",
   "next": "1.3.3",
   "pending_on_pc": [
-    "git am 1.3.0.patch, 1.3.1.patch, 1.3.2.patch (in that order)",
-    "git push",
-    "wrangler d1 migrations apply uns-app --remote (0005, 0006, 0007)",
-    "wrangler secret put SMTP_PASS",
-    "wrangler deploy",
-    "In the app: Developer > Send test email to me"
+    "Set SMTP_PASS secret if not done, then Developer > Send test email to me"
   ],
-  "right_now": "Build dashboard (1.3.2) built, waiting for Tabish to deploy it with 1.3.0 and 1.3.1.",
+  "right_now": "1.3.2 is live. Waiting on Tabish for the mobile look, then 1.3.3 Mobile basics.",
   "blocked_on_tabish": [
-    "Deploy 1.3.0, 1.3.1, 1.3.2",
+    "Confirm test email arrives",
     "Pick mobile look: playful or premium",
     "Founders Desk: personal or shared",
-    "Founder Traits: approve rebuild direction"
+    "Founder Traits: approve rebuild direction",
+    "Ali and Mehak: sign in and save recovery codes"
   ],
   "next_three": [
     "1.3.3 Mobile basics (back gesture, stay signed in, offline, install help)",
@@ -24,40 +20,141 @@
     "Intake database (permanent D1 tables, private /intake link)"
   ],
   "phases": [
-    { "name": "Foundation", "done": 6, "total": 6 },
-    { "name": "Daily screens", "done": 5, "total": 6 },
-    { "name": "Sign-in and recovery", "done": 5, "total": 6 },
-    { "name": "Build dashboard", "done": 3, "total": 4 },
-    { "name": "Mobile", "done": 0, "total": 4 },
-    { "name": "Intake, Desk, Board", "done": 0, "total": 3 }
+    {
+      "name": "Foundation",
+      "done": 6,
+      "total": 6
+    },
+    {
+      "name": "Daily screens",
+      "done": 5,
+      "total": 6
+    },
+    {
+      "name": "Sign-in and recovery",
+      "done": 6,
+      "total": 6
+    },
+    {
+      "name": "Build dashboard",
+      "done": 4,
+      "total": 4
+    },
+    {
+      "name": "Mobile",
+      "done": 0,
+      "total": 4
+    },
+    {
+      "name": "Intake, Desk, Board",
+      "done": 0,
+      "total": 3
+    }
   ],
   "features": [
-    { "name": "Sign-in, two-factor, lockout", "state": "Deployed", "ver": "1.0" },
-    { "name": "Leads and funnel", "state": "Deployed", "ver": "1.1" },
-    { "name": "Tasks", "state": "Deployed", "ver": "1.1" },
-    { "name": "Follow-ups", "state": "Deployed", "ver": "1.1" },
-    { "name": "Watchlist", "state": "Deployed", "ver": "1.2" },
-    { "name": "Eye icon, recovery codes, remember device", "state": "Deployed", "ver": "1.2.3" },
-    { "name": "Forgot password by email", "state": "Tested", "ver": "1.3.0", "note": "Real delivery from Hostinger untested" },
-    { "name": "What's new banner and page", "state": "Tested", "ver": "1.3.1" },
-    { "name": "Build dashboard and notes", "state": "Tested", "ver": "1.3.2" },
-    { "name": "Mobile basics", "state": "Designed", "ver": "1.3.3" },
-    { "name": "Mobile reskin", "state": "Designed", "ver": "later", "note": "Prototype saved in the project" },
-    { "name": "Intake database", "state": "Idea", "ver": "later" },
-    { "name": "Founders Desk", "state": "Idea", "ver": "later" },
-    { "name": "Message board", "state": "Idea", "ver": "later" },
-    { "name": "Client door and approvals", "state": "Designed", "ver": "later" }
+    {
+      "name": "Sign-in, two-factor, lockout",
+      "state": "Deployed",
+      "ver": "1.0"
+    },
+    {
+      "name": "Leads and funnel",
+      "state": "Deployed",
+      "ver": "1.1"
+    },
+    {
+      "name": "Tasks",
+      "state": "Deployed",
+      "ver": "1.1"
+    },
+    {
+      "name": "Follow-ups",
+      "state": "Deployed",
+      "ver": "1.1"
+    },
+    {
+      "name": "Watchlist",
+      "state": "Deployed",
+      "ver": "1.2"
+    },
+    {
+      "name": "Eye icon, recovery codes, remember device",
+      "state": "Deployed",
+      "ver": "1.2.3"
+    },
+    {
+      "name": "Forgot password by email",
+      "state": "Deployed",
+      "ver": "1.3.0",
+      "note": "Real delivery from Hostinger untested"
+    },
+    {
+      "name": "What's new banner and page",
+      "state": "Deployed",
+      "ver": "1.3.1"
+    },
+    {
+      "name": "Build dashboard and notes",
+      "state": "Deployed",
+      "ver": "1.3.2"
+    },
+    {
+      "name": "Mobile basics",
+      "state": "Designed",
+      "ver": "1.3.3"
+    },
+    {
+      "name": "Mobile reskin",
+      "state": "Designed",
+      "ver": "later",
+      "note": "Prototype saved in the project"
+    },
+    {
+      "name": "Intake database",
+      "state": "Idea",
+      "ver": "later"
+    },
+    {
+      "name": "Founders Desk",
+      "state": "Idea",
+      "ver": "later"
+    },
+    {
+      "name": "Message board",
+      "state": "Idea",
+      "ver": "later"
+    },
+    {
+      "name": "Client door and approvals",
+      "state": "Designed",
+      "ver": "later"
+    }
   ],
   "risks": [
-    "1.3.0 and 1.3.1 are not deployed. Live is behind built.",
     "Hostinger SMTP from a Worker is untested for real delivery.",
     "This file is only accurate if every build updates it (rule in CLAUDE.md).",
     "iPhone may clear home-screen app data when unused."
   ],
   "changelog": [
-    { "v": "1.3.2", "date": "2026-11-02", "text": "Build dashboard, STATUS.json, CLAUDE.md, internal notes." },
-    { "v": "1.3.1", "date": "2026-11-01", "text": "What's new banner and page." },
-    { "v": "1.3.0", "date": "2026-11-01", "text": "Forgot password by email." },
-    { "v": "1.2.3", "date": "2026-10-30", "text": "Eye icon, recovery codes, remember this device." }
+    {
+      "v": "1.3.2",
+      "date": "2026-11-02",
+      "text": "Build dashboard, STATUS.json, CLAUDE.md, internal notes."
+    },
+    {
+      "v": "1.3.1",
+      "date": "2026-11-01",
+      "text": "What's new banner and page."
+    },
+    {
+      "v": "1.3.0",
+      "date": "2026-11-01",
+      "text": "Forgot password by email."
+    },
+    {
+      "v": "1.2.3",
+      "date": "2026-10-30",
+      "text": "Eye icon, recovery codes, remember this device."
+    }
   ]
 }
