@@ -532,7 +532,7 @@
       try {
         var m = document.querySelector('main') || document, c = [].slice.call(m.querySelectorAll('img')).filter(function (i) { return /licdn\.com/.test(i.src) && /profile-(displayphoto|framedphoto)/.test(i.src); }).sort(function (a, b) { return b.naturalWidth - a.naturalWidth; })[0];
         var s = c ? c.src : ((document.querySelector('meta[property="og:image"]') || {}).content || '');
-        var h1 = document.querySelector('main h1'), nm = (h1 ? h1.innerText : (document.querySelector('meta[property="og:title"]') || {}).content || '').split('\n')[0];
+        var h1 = document.querySelector('main h1'), nm = (document.title && !/^\(?\d*\)?\s*LinkedIn$/i.test(document.title) ? document.title : (h1 ? h1.innerText : (document.querySelector('meta[property="og:title"]') || {}).content || '')).split('\n')[0];
         var p = location.pathname.match(/^\/in\/[^\/]+/);
         if (!p || !s) { alert('Open a LinkedIn profile first, then click Save to UNS.'); return; }
         window.open('APP/app/photo.html#u=' + encodeURIComponent(location.origin + p[0]) + '&i=' + encodeURIComponent(s) + '&n=' + encodeURIComponent(nm), 'uns_photo', 'width=420,height=300');

@@ -890,9 +890,9 @@ async function avatarCapture(env, user, req) {
   }
   if (!hits.length) return json({ ok: false, reason: 'nomatch' });
   // The Add people box names someone from their link (nate-chenette-123 becomes Natechenette123). Fix that name from the real one on the page, but never overwrite a name a person typed.
-  const real = String(b.name || '').replace(/\s*[|\u2013\u2014-]\s*LinkedIn\s*$/i, '').replace(/\s*\([^)]*\)\s*$/, '').replace(/\s+/g, ' ').trim();
-  const renamed = [];
-  if (/^[\p{L}\p{M}'.\u2019 -]{2,80}$/u.test(real)) {
+  const real = String(b.name || '').replace(/^\(\d+\+?\)\s*/, '').split(/\s+[|\u2013\u2014-]\s+/)[0].split(',')[0].replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  const renamed = [], valid = /^[\p{L}\p{M}'.\u2019 -]{2,80}$/u.test(real);
+  if (valid) {
     for (const h of hits) {
       if (h.name === nameFromUrl(h.url) && h.name !== real) {
         await env.DB.prepare(`UPDATE ${AV_TABLE[h.kind]} SET name = ? WHERE id = ?`).bind(real, h.id).run();
@@ -902,9 +902,9 @@ async function avatarCapture(env, user, req) {
     }
   }
   const got = await fetchImg(String(b.img_url || ''));
-  if (!got) return json({ ok: false, reason: 'image', names: hits.map(h => h.name), renamed });
+  if (!got) return json({ ok: false, reason: 'image', names: hits.map(h => h.name), renamed, read: valid ? real : '' });
   for (const h of hits) { await avatarSave(env, h.kind, h.id, got.mime, got.b64); await log(env, user.login_id, 'avatar_captured', h.kind, h.id); }
-  return json({ ok: true, names: hits.map(h => h.name), renamed });
+  return json({ ok: true, names: hits.map(h => h.name), renamed, read: valid ? real : '' });
 }
 async function avatarFetch(env, user, kind, rid) {
   if (!AV_TABLE[kind]) return bad('Not found.', 404);
