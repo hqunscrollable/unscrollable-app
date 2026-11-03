@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.3.8', date: '4 Nov 2026', title: 'Save to UNS also fixes the name',
+    what: 'People added by pasting a link get a name guessed from the link, like Natechenette. The Save to UNS button now reads the real name from their LinkedIn page and fixes it.',
+    does: 'Click the button on their profile as before. The photo is saved and, if the name was only a guess from the link, it becomes their real first and last name. Names you typed yourself are never changed. Drag the new button from My account to your bookmarks bar again: the old one does not send the name.',
+    friction: 'Paste only the links, then fix names and photos with one click each.',
+    where: 'My account, Save LinkedIn photos with one click.' },
   { v: '1.3.7', date: '4 Nov 2026', title: 'Save LinkedIn photos with one click',
     what: 'A small Save to UNS button for your browser bar. On any LinkedIn profile you click it and their photo is saved to that person in Leads or the Watchlist.',
     does: 'Once: open My account, drag the Save to UNS button to your bookmarks bar. After that, one click on a LinkedIn profile does the rest. It matches the person by their profile link. If LinkedIn blocks the download, the window tells you to copy the photo and press Ctrl+V on their card.',

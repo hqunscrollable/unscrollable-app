@@ -886,13 +886,25 @@ async function avatarCapture(env, user, req) {
   const hits = [];
   for (const kind of ['lead', 'watch']) {
     const rows = (await env.DB.prepare(`SELECT id, name, profile_url FROM ${AV_TABLE[kind]} WHERE profile_url LIKE '%linkedin.com/in/%'`).all()).results;
-    for (const r of rows) if (liSlug(r.profile_url) === slug) hits.push({ kind, id: r.id, name: r.name });
+    for (const r of rows) if (liSlug(r.profile_url) === slug) hits.push({ kind, id: r.id, name: r.name, url: r.profile_url });
   }
   if (!hits.length) return json({ ok: false, reason: 'nomatch' });
+  // The Add people box names someone from their link (nate-chenette-123 becomes Natechenette123). Fix that name from the real one on the page, but never overwrite a name a person typed.
+  const real = String(b.name || '').replace(/\s*[|\u2013\u2014-]\s*LinkedIn\s*$/i, '').replace(/\s*\([^)]*\)\s*$/, '').replace(/\s+/g, ' ').trim();
+  const renamed = [];
+  if (/^[\p{L}\p{M}'.\u2019 -]{2,80}$/u.test(real)) {
+    for (const h of hits) {
+      if (h.name === nameFromUrl(h.url) && h.name !== real) {
+        await env.DB.prepare(`UPDATE ${AV_TABLE[h.kind]} SET name = ? WHERE id = ?`).bind(real, h.id).run();
+        await log(env, user.login_id, 'name_fixed', h.kind, h.id, h.name + ' to ' + real);
+        renamed.push(real); h.name = real;
+      }
+    }
+  }
   const got = await fetchImg(String(b.img_url || ''));
-  if (!got) return json({ ok: false, reason: 'image', names: hits.map(h => h.name) });
+  if (!got) return json({ ok: false, reason: 'image', names: hits.map(h => h.name), renamed });
   for (const h of hits) { await avatarSave(env, h.kind, h.id, got.mime, got.b64); await log(env, user.login_id, 'avatar_captured', h.kind, h.id); }
-  return json({ ok: true, names: hits.map(h => h.name) });
+  return json({ ok: true, names: hits.map(h => h.name), renamed });
 }
 async function avatarFetch(env, user, kind, rid) {
   if (!AV_TABLE[kind]) return bad('Not found.', 404);

@@ -7,6 +7,15 @@ ok('not a LinkedIn link is refused', (await post({ profile_url: 'https://example
 ok('person not in the app is refused', (await post({ profile_url: 'https://www.linkedin.com/in/nobody-here-xyz', img_url: 'https://media.licdn.com/a.jpg' })).reason === 'nomatch');
 const m = await post({ profile_url: 'https://www.linkedin.com/in/ananth-s', img_url: 'https://evil.example/a.jpg' });
 ok('matches by profile (ignoring the trailing slash) and refuses a non-LinkedIn image host', m.reason === 'image' && m.names.includes('Ananth Sankaralingam'));
+await fetch(B + '/app/api/watch', { method: 'POST', headers: { ...H, cookie }, body: JSON.stringify({ items: [{ profile_url: 'https://www.linkedin.com/in/natechenette' }, { name: 'Typed Name', profile_url: 'https://www.linkedin.com/in/typed-name-test' }], kind: 'outlier', owner: 'Tabish' }) });
+const names = async () => (await (await fetch(B + '/app/api/data', { headers: { cookie } })).json()).watch.map(w => w.name);
+ok('add-people names a person from the link', (await names()).some(n => /^Natechenette$/.test(n)));
+const r1 = await post({ profile_url: 'https://www.linkedin.com/in/natechenette', img_url: 'https://evil.example/a.jpg', name: 'Nate Chenette | LinkedIn' });
+ok('the real name replaces the slug name', r1.renamed && r1.renamed[0] === 'Nate Chenette' && (await names()).includes('Nate Chenette'));
+await post({ profile_url: 'https://www.linkedin.com/in/typed-name-test', img_url: 'https://evil.example/a.jpg', name: 'Someone Else' });
+ok('a name someone typed is never overwritten', (await names()).includes('Typed Name') && !(await names()).includes('Someone Else'));
+const r3 = await post({ profile_url: 'https://www.linkedin.com/in/natechenette', img_url: 'https://evil.example/a.jpg', name: 'x<script>' });
+ok('odd names are ignored', !r3.renamed.length);
 const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 1200, height: 900 } });
 const pg = await ctx.newPage();
 await pg.goto(B + '/app/login.html'); await pg.fill('#id', 'tabish'); await pg.fill('#pw', PW); await pg.click('#go'); await pg.waitForURL('**/app/');
