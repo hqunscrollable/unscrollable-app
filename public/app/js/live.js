@@ -42,8 +42,8 @@
       method: method, credentials: 'same-origin',
       headers: { 'content-type': 'application/json', 'x-uns': '1' },
       body: body === undefined ? undefined : JSON.stringify(body)
-    }).then(function (r) {
-      if (r.status === 401) { location.href = '/app/login.html'; throw new Error('auth'); }
+    }).catch(function () { throw new Error('No connection. Try again when you are back online.'); }).then(function (r) {
+      if (r.status === 401) { location.replace('/app/login.html'); throw new Error('auth'); }
       return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Failed'); return j; });
     });
   }
@@ -352,6 +352,7 @@
   /* ---------- MY ACCOUNT ---------- */
   U.screens.account = function () {
     var h = head('My account', 'Signed in as ' + esc(ME.name) + ' (' + esc(ME.login_id) + ').');
+    if (U.installCard) h += U.installCard();
     h += '<div class="grid g2" style="align-items:start"><div class="card"><h3 style="margin-bottom:8px">Change password</h3><div class="stack" style="gap:10px"><label class="f">Current password<input id="pw_cur" type="password" autocomplete="current-password"></label><label class="f">New password (12 characters or more)<input id="pw_new" type="password" autocomplete="new-password"></label><div><button type="button" class="btn pri" data-act="pwsave">Change password</button></div></div></div>'
       + '<div class="card"><h3 style="margin-bottom:8px">Two-factor sign-in</h3>' + (ME.totp_enabled ? '<div class="banner">Two-factor is on for your account. On the sign-in page you can type a recovery code in place of the authenticator code, and tick Remember this device to skip the code on this computer for 30 days.</div>' : '<div class="stack" style="gap:10px"><div class="sm">Founders use an authenticator app. Set it up now: press the button, add the key to your app, then type the 6-digit code to confirm.</div>' + (S.ui.twofa ? '<div class="card tight"><div class="sm mut">Key (type it into your authenticator app)</div><code style="overflow-wrap:anywhere;font-size:15px">' + esc(S.ui.twofa.secret) + '</code></div><label class="f">6-digit code<input id="tf_code" inputmode="numeric" maxlength="7" autocomplete="one-time-code"></label><div><button type="button" class="btn pri" data-act="tfon">Turn on</button></div>' : '<div><button type="button" class="btn pri" data-act="tfsetup">Start setup</button></div>') + '</div>') + '</div></div>';
     h += '<div class="grid g2" style="align-items:start"><div class="card"><h3 style="margin-bottom:8px">Email for password reset</h3><div class="stack" style="gap:10px"><div class="sm">' + (ME.email ? 'On file: ' + esc(ME.email) + '.' : 'No email on file yet.') + ' Forgot password sends a reset link here. Leave empty to remove it.</div><label class="f">Email<input id="em_new" type="email" autocomplete="email"></label><label class="f">Current password<input id="em_pw" type="password" autocomplete="current-password"></label><div><button type="button" class="btn" data-act="emailsave">Save email</button></div></div></div></div>';
@@ -455,7 +456,7 @@
 
   /* ---------- actions ---------- */
   var A = U.acts;
-  A.signout = function () { api('POST', '/logout', {}).then(function () { location.href = '/app/login.html'; }).catch(function () { location.href = '/app/login.html'; }); };
+  A.signout = function () { api('POST', '/logout', {}).then(function () { location.replace('/app/login.html'); }).catch(function () { location.replace('/app/login.html'); }); };
   A.wtab = function (el) { S.ui.wtab = el.getAttribute('data-id'); U.render(); };
   A.wsearch = function () { S.ui.wq = val('w_q'); U.render(); };
   function wby() { return S.ui.wwho || ME.name; }
@@ -528,7 +529,7 @@
     var p = el.getAttribute('data-id').split(':');
     if (p[1] === 'watch') { S.ui.llist = 'watch'; S.ui.wtab = 'today'; S.ui.wwho = ME.name; }
     if (p[1] === 'add') { S.ui.ladd = true; if (S.ui.llist === 'watch') S.ui.llist = 'icp'; }
-    S.route = p[0]; S.ui.draw = false; U.render();
+    if (U.go) { U.go(p[0]); } else { S.route = p[0]; S.ui.draw = false; U.render(); }
   };
   A.llistsel = function (el) { S.ui.llist = el.getAttribute('data-id'); U.render(); };
   A.lview = function (el) { S.ui.lview = el.getAttribute('data-id'); U.render(); };

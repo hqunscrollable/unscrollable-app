@@ -12,7 +12,7 @@ const COOKIE = 'uns_app';
 const TRUST_COOKIE = 'uns_dev', TRUST_DAYS = 30;     // remembered device: skips the authenticator code, never the password
 const LOCK_AFTER = 5, LOCK_MINUTES = 15;
 const PUBLIC_PAGES = new Set(['/app/login.html', '/app/login.js', '/app/login.css', '/app/reset.html', '/app/reset.js', '/app/forgot.html', '/app/forgot.js', '/app/eye.js',
-  '/app/favicon.svg', '/app/icon-180.png', '/app/icon-192.png', '/app/icon-512.png', '/app/icon-maskable-512.png', '/app/manifest.webmanifest']);
+  '/app/sw.js', '/app/favicon.svg', '/app/icon-180.png', '/app/icon-192.png', '/app/icon-512.png', '/app/icon-maskable-512.png', '/app/manifest.webmanifest']);
 const OWNERS = ['Tabish', 'Ali', 'Mehak'];
 const T_STATUS = ['todo', 'doing', 'blocked', 'done'];
 const T_PRIO = ['high', 'normal', 'low'];
@@ -82,9 +82,25 @@ async function startSession(env, req, userId) {
   await env.DB.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,ua) VALUES (?,?,?,?)')
     .bind(await sha256hex(tok), userId, exp, (req.headers.get('user-agent') || '').slice(0, 120)).run();
   await env.DB.prepare('UPDATE users SET last_seen = ? WHERE id = ?').bind(nowIso(), userId).run();
-  return `${COOKIE}=${tok}; Path=/app; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_DAYS * 86400}`;
+  return `${COOKIE}=${tok}; Path=/app; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}`;
 }
-const clearCookie = `${COOKIE}=; Path=/app; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
+// Sliding session: every time the app opens, the session gets 30 more days, but never more than 90 days after sign-in.
+const SESSION_CAP_DAYS = 90;
+async function renewSession(env, req) {
+  const tok = cookieOf(req, COOKIE);
+  if (!tok || tok.length < 40) return null;
+  const h = await sha256hex(tok);
+  const row = await env.DB.prepare('SELECT created_at FROM sessions WHERE token_hash = ?').bind(h).first();
+  if (!row) return null;
+  let t0 = Date.parse(String(row.created_at || '').replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(row.created_at || '')) ? '' : 'Z'));
+  if (!Number.isFinite(t0)) t0 = Date.now();
+  const end = Math.min(Date.now() + SESSION_DAYS * 864e5, t0 + SESSION_CAP_DAYS * 864e5);
+  const left = Math.floor((end - Date.now()) / 1000);
+  if (left < 3600) return null;
+  await env.DB.prepare('UPDATE sessions SET expires_at = ? WHERE token_hash = ?').bind(new Date(end).toISOString(), h).run();
+  return `${COOKIE}=${tok}; Path=/app; HttpOnly; Secure; SameSite=Lax; Max-Age=${left}`;
+}
+const clearCookie = `${COOKIE}=; Path=/app; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
 // ---------- recovery codes and remembered devices ----------
 const normCode = (c) => String(c || '').toLowerCase().replace(/[\s-]/g, '');
@@ -120,9 +136,9 @@ async function trustDevice(env, req, userId) {
   const tok = randomHex(32);
   await env.DB.prepare('INSERT INTO trusted_devices(token_hash,user_id,expires_at,ua) VALUES (?,?,?,?)')
     .bind(await sha256hex(tok), userId, new Date(Date.now() + TRUST_DAYS * 864e5).toISOString(), (req.headers.get('user-agent') || '').slice(0, 120)).run();
-  return `${TRUST_COOKIE}=${tok}; Path=/app; HttpOnly; Secure; SameSite=Strict; Max-Age=${TRUST_DAYS * 86400}`;
+  return `${TRUST_COOKIE}=${tok}; Path=/app; HttpOnly; Secure; SameSite=Lax; Max-Age=${TRUST_DAYS * 86400}`;
 }
-const clearTrustCookie = `${TRUST_COOKIE}=; Path=/app; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
+const clearTrustCookie = `${TRUST_COOKIE}=; Path=/app; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
 function passwordProblem(pw, loginId) {
   if (typeof pw !== 'string' || pw.length < 12) return 'Use at least 12 characters.';
@@ -868,7 +884,7 @@ async function route(req, env, ctx) {
   if (p.startsWith('/app/api/')) {
     const api = p.slice('/app/api'.length);
     if (method !== 'GET' && method !== 'HEAD') {
-      // CSRF: custom header plus same-origin check, on top of SameSite=Strict.
+      // CSRF: custom header plus same-origin check, on top of SameSite=Lax.
       if (req.headers.get('x-uns') !== '1') return bad('Bad request.', 403);
       const o = req.headers.get('origin');
       if (o && o !== url.origin) return bad('Bad origin.', 403);
@@ -891,7 +907,7 @@ async function route(req, env, ctx) {
     }
     if (!user) return bad('Sign in first.', 401);
     let m;
-    if (api === '/me' && method === 'GET') return json({ id: user.id, name: user.name, login_id: user.login_id, role: user.role, is_dev: !!user.is_dev, totp_enabled: !!user.totp_enabled, recovery_left: user.claude ? 0 : await recoveryLeft(env, user.id), ...(user.claude ? { email: null, seen_release: null } : (await env.DB.prepare('SELECT email, seen_release FROM users WHERE id = ?').bind(user.id).first()) || {}) });
+    if (api === '/me' && method === 'GET') { const ck = user.claude ? null : await renewSession(env, req).catch(() => null); return json({ id: user.id, name: user.name, login_id: user.login_id, role: user.role, is_dev: !!user.is_dev, totp_enabled: !!user.totp_enabled, recovery_left: user.claude ? 0 : await recoveryLeft(env, user.id), ...(user.claude ? { email: null, seen_release: null } : (await env.DB.prepare('SELECT email, seen_release FROM users WHERE id = ?').bind(user.id).first()) || {}) }, 200, ck ? { 'set-cookie': ck } : {}); }
     if (api === '/logout' && method === 'POST') return logout(env, req);
     if (api === '/password' && method === 'POST') return changePassword(env, user, req);
     if (api === '/2fa/setup' && method === 'POST') return twofaSetup(env, user);
@@ -951,6 +967,10 @@ async function route(req, env, ctx) {
   // Pages and scripts: only the sign-in files are public. Everything else needs a session.
   const path = (p === '/app') ? '/app/index.html' : p;
   if (method !== 'GET' && method !== 'HEAD') return withSec(new Response('Method not allowed', { status: 405 }));
+  if (path === '/app/login.html') {
+    // Already signed in: skip the sign-in page, so the back gesture never shows a login screen.
+    if (await sessionUser(env, req)) return withSec(Response.redirect(url.origin + '/app/', 302));
+  }
   if (!PUBLIC_PAGES.has(path)) {
     const user = await sessionUser(env, req);
     if (!user) return withSec(Response.redirect(url.origin + '/app/login.html', 302));

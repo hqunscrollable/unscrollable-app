@@ -1,23 +1,26 @@
 {
-  "updated": "2026-11-02",
+  "updated": "2026-11-04",
   "live": "1.3.2",
-  "built": "1.3.2",
-  "next": "1.3.3",
+  "built": "1.3.3",
+  "next": "1.3.4",
   "pending_on_pc": [
-    "Set SMTP_PASS secret if not done, then Developer > Send test email to me"
+    "Apply unscrollable-1.3.3-dropin.zip, git add -A, commit, push, npx wrangler deploy (no migration)",
+    "Developer: switch off the Claude access code that was pasted in chat",
+    "After deploy: install to the home screen on the phone, check back gesture, stay signed in, and airplane mode"
   ],
-  "right_now": "1.3.2 is live. Waiting on Tabish for the mobile look, then 1.3.3 Mobile basics.",
+  "right_now": "1.3.3 Mobile basics is built and tested, waiting for Tabish to deploy it. Email works through Resend.",
   "blocked_on_tabish": [
-    "Confirm test email arrives",
-    "Pick mobile look: playful or premium",
+    "Deploy 1.3.3 and try it on the phone",
+    "Pick mobile look: playful or premium (needed for the screen pass)",
+    "Watchlist for three founders: restate in one sentence",
     "Founders Desk: personal or shared",
     "Founder Traits: approve rebuild direction",
     "Ali and Mehak: sign in and save recovery codes"
   ],
   "next_three": [
-    "1.3.3 Mobile basics (back gesture, stay signed in, offline, install help)",
-    "Mobile screen pass using the saved prototype",
-    "Intake database (permanent D1 tables, private /intake link)"
+    "Mobile screen pass using the saved prototype (needs the look decision)",
+    "Intake database (permanent D1 tables, private /intake link)",
+    "Watchlist for three founders (needs one sentence from Tabish)"
   ],
   "phases": [
     {
@@ -42,7 +45,7 @@
     },
     {
       "name": "Mobile",
-      "done": 0,
+      "done": 1,
       "total": 4
     },
     {
@@ -86,7 +89,7 @@
       "name": "Forgot password by email",
       "state": "Deployed",
       "ver": "1.3.0",
-      "note": "Real delivery from Hostinger untested"
+      "note": "Sends through Resend from mail.unscrollable.studio. Emails saved for all three founders."
     },
     {
       "name": "What's new banner and page",
@@ -99,9 +102,16 @@
       "ver": "1.3.2"
     },
     {
+      "name": "Email through Resend",
+      "state": "Deployed",
+      "ver": "1.3.2",
+      "note": "Hostinger SMTP cannot be reached from a Worker"
+    },
+    {
       "name": "Mobile basics",
-      "state": "Designed",
-      "ver": "1.3.3"
+      "state": "Tested",
+      "ver": "1.3.3",
+      "note": "Back gesture, stay signed in, offline, install help. Deploy pending."
     },
     {
       "name": "Mobile reskin",
@@ -131,11 +141,22 @@
     }
   ],
   "risks": [
-    "Hostinger SMTP from a Worker is untested for real delivery.",
+    "Email depends on Resend: the API key lives in a Worker secret and the domain records live in Cloudflare DNS.",
     "This file is only accurate if every build updates it (rule in CLAUDE.md).",
-    "iPhone may clear home-screen app data when unused."
+    "iPhone may still clear home-screen app data when unused. Cannot be promised away.",
+    "Offline mode shows saved data only. Changes made offline do not save."
   ],
   "changelog": [
+    {
+      "v": "1.3.3",
+      "date": "2026-11-04",
+      "text": "Phone basics: login page skipped when signed in, every screen is a back step, session renews, SameSite Lax, service worker and offline bar, install help."
+    },
+    {
+      "v": "1.3.2",
+      "date": "2026-11-04",
+      "text": "Fix: email now sends through Resend over HTTPS, from mail.unscrollable.studio. Errors show the real reason."
+    },
     {
       "v": "1.3.2",
       "date": "2026-11-02",

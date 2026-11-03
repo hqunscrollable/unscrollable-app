@@ -217,15 +217,32 @@ function render(){
   var sd=$('side');if(sd){sd.classList.toggle('open',S.ui.draw);}
 }
 W.U.render=render;
+var H={sheet:false};   // true while an open sheet owns one extra history step, so the back gesture closes it
+function sheetClosed(){var sh=$('sheet'),sc=$('scrim');sh.hidden=true;sc.hidden=true;if(H.sheet){H.sheet=false;try{history.back();}catch(e){}}}
 function renderSheet(){
   var sh=$('sheet'),sc=$('scrim');
-  if(!S.ui.sheet||S.door!=='back'){sh.hidden=true;sc.hidden=true;return;}
+  if(!S.ui.sheet||S.door!=='back'){sheetClosed();return;}
   var f=W.U.sheets[S.ui.sheet.type];
-  if(!f){sh.hidden=true;sc.hidden=true;return;}
+  if(!f){sheetClosed();return;}
+  if(!H.sheet){H.sheet=true;try{history.pushState({r:S.route,sheet:1},'',location.hash||('#'+S.route));}catch(e){}}
   var keep=sh.scrollTop;
   sh.innerHTML='<div class="in">'+f(S.ui.sheet)+'</div>';sh.hidden=false;sc.hidden=false;sh.scrollTop=keep;
 }
 W.U.renderSheet=renderSheet;
+/* Each screen is a history step: back goes to the screen before, and on the first screen it leaves the app. */
+function go(r){
+  if(H.sheet){H.sheet=false;try{history.replaceState({r:r},'','#'+r);}catch(e){}}
+  else if(r!==S.route){try{history.pushState({r:r},'','#'+r);}catch(e){}}
+  S.route=r;S.ui.sheet=null;S.ui.client=null;S.ui.draw=false;render();window.scrollTo(0,0);
+}
+W.U.go=go;
+window.addEventListener('popstate',function(e){
+  var st=e.state||{};
+  if(H.sheet&&!st.sheet){H.sheet=false;S.ui.sheet=null;var sh=$('sheet'),sc=$('scrim');sh.hidden=true;sc.hidden=true;return;}
+  if(st.sheet)return;
+  var r=st.r||(location.hash||'').replace('#','')||'home';
+  if(S.door==='back'&&r!==S.route&&W.U.screens[r]){S.route=r;S.ui.sheet=null;S.ui.client=null;S.ui.draw=false;render();window.scrollTo(0,0);}
+});
 W.U.closeSheet=function(){S.ui.sheet=null;renderSheet();};
 W.U.sheets={};W.U.screens={};W.U.acts={};
 
@@ -234,7 +251,7 @@ document.addEventListener('click',function(e){
   var el=e.target.closest('[data-act]');
   if(!el){if(e.target.id==='scrim'){W.U.closeSheet();}return;}
   var a=el.getAttribute('data-act');
-  if(a==='nav'){S.route=el.getAttribute('data-id');S.ui.sheet=null;S.ui.client=null;S.ui.draw=false;render();window.scrollTo(0,0);return;}
+  if(a==='nav'){go(el.getAttribute('data-id'));return;}
   if(a==='door'){S.door=el.getAttribute('data-id');S.ui.sheet=null;S.ui.draw=false;render();return;}
   if(a==='theme'){S.theme=el.getAttribute('data-id');render();return;}
   if(a==='menu'){S.ui.draw=!S.ui.draw;render();return;}
@@ -249,5 +266,6 @@ function init(){
   var h=(location.hash||'').replace('#','');
   if(h==='client'){S.door='client';}else if(W.U.screens[h]){S.route=h;}
   render();
+  try{history.replaceState({r:S.route},'','#'+(S.door==='client'?'client':S.route));}catch(e){}
 }
 })();

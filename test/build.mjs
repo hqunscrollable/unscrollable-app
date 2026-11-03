@@ -16,8 +16,8 @@ await pg.goto(B + '/app/login.html'); await pg.fill('#id', 'tabish'); await pg.f
 await pg.waitForSelector('[data-act=nav][data-id=build]');
 await pg.click('[data-act=nav][data-id=build]'); await pg.waitForSelector('.bento');
 let t = await pg.textContent('#main');
-ok('shows live and built', /1\.2\.3/.test(t) && /1\.3\.2/.test(t) && /Waiting for you to deploy/.test(t));
-ok('ship checklist and features', /git am/.test(t) && /Mobile basics/.test(t));
+ok('shows live and built', /1\.3\.2/.test(t) && /1\.3\.3/.test(t));
+ok('ship checklist and features', /wrangler deploy/.test(t) && /Mobile basics/.test(t));
 await pg.click('[data-act=bfs][data-id=Idea]'); t = await pg.textContent('#main'); ok('filter Idea', (await pg.locator('.card.tight').count()) === 3);
 await pg.fill('#bn_t', 'Remember the SMTP test'); await pg.selectOption('#bn_g', 'Remember'); await pg.click('[data-act=bnadd]'); await pg.waitForTimeout(500);
 ok('note saved', /Remember the SMTP test/.test(await pg.textContent('#main')));

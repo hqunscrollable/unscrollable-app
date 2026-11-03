@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.3.3', date: '4 Nov 2026', title: 'Phone basics: back button, stay signed in, offline',
+    what: 'The app now behaves like a normal phone app. The back gesture moves between screens and closes a card, it never lands on the sign-in page, and you stay signed in while you keep using it.',
+    does: 'Signed-in people skip the sign-in page. Every screen is a back step. Your session renews each time you open the app. Links from other apps no longer look like a sign-out. A red bar shows when you are offline, with the last saved data. The menu has Sign out and Light or dark on phones, and My account has install steps for your home screen.',
+    friction: 'No more feeling logged out, and no more sign-in page after a swipe back. A bad connection shows saved screens, not a blank page.',
+    where: 'My account, under System, has the home-screen install card.' },
   { v: '1.3.2', date: '2 Nov 2026', title: 'Build dashboard and your own notes',
     what: 'A Build page in the sidebar (Tabish only) that shows the whole app at a glance: live version, built version, what is next, your steps on the PC, features and risks.',
     does: 'Reads STATUS.json from the repo, so it is always the real state. Also holds private notes with tags, pins and search, saved in the database.',
