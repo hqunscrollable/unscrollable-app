@@ -18,8 +18,13 @@ async function sendResend(env, { to, subject, text }) {
     });
   } catch (e) { throw new Error('Could not reach Resend: ' + String((e && e.message) || e).slice(0, 100)); }
   if (!res.ok) {
-    let m = ''; try { const j = await res.json(); m = j.message || j.name || ''; } catch {}
-    throw new Error('Resend said ' + res.status + (m ? ': ' + clean(m).slice(0, 140) : ''));
+    let m = '';
+    try {
+      const raw = await res.text();
+      try { const j = JSON.parse(raw); m = (typeof j.message === 'string' && j.message) || (typeof j.error === 'string' && j.error) || (j.error && j.error.message) || j.name || raw; }
+      catch { m = raw; }
+    } catch {}
+    throw new Error('Resend said ' + res.status + (m ? ': ' + clean(typeof m === 'string' ? m : JSON.stringify(m)).slice(0, 200) : ' (no reason given)'));
   }
 }
 
