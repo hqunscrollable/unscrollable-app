@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.4.0', date: '4 Nov 2026', title: 'The phone app: tabs, Dashboard, Leads, Tasks, Watchlist',
+    what: 'On a phone the app now has a slim header and a bottom tab bar: Dashboard, Leads, Tasks, More. Dashboard has a Do this first card, the Watchlist ring, colour tiles, Engage and follow-ups. Leads has search, Due / All / Away, owner chips and groups by urgency. Tasks has a quick add box, owner chips and groups (Overdue, Due today, Doing, To do, Blocked). The Watchlist has a progress ring, Today / All people / Add people, and one big Commented button per person.',
+    does: 'More lists every other screen, with the live ones first. The offline bar is red. Desktop looks the same as before.',
+    friction: 'The one thing to do next is the first thing you see, and every main screen is one tap away.',
+    where: 'Open the app on your phone. Add it to your home screen from More.' },
   { v: '1.3.10', date: '4 Nov 2026', title: 'Refresh keeps your place',
     what: 'F5, Ctrl+F5 and reopening the app now bring you back to the screen you were on, with its tab and filters.',
     does: 'The app remembers the last screen on this device, plus the Leads view and owner filter, Tasks view, Watchlist tab and search, and Follow-ups list. An open card or form is not restored.',

@@ -226,7 +226,7 @@ W.U.render=render;
 /* Remember the last screen and its tabs and filters, so a refresh or reopening the app comes back to the same place (1.3.10). */
 var KEEP=['leadView','lview','f','lown','taskF','tkView','tkDone','tkArea','tkWho','wtab','wq','wshow','wown','wkind','fuList','fuWho','rl','dev','ctab'];
 function keepPlace(){if(S.door!=='back')return;try{var u={};KEEP.forEach(function(k){if(S.ui[k]!==undefined)u[k]=S.ui[k];});localStorage.setItem('uns-last',JSON.stringify({r:S.route,u:u}));}catch(e){}}
-function restorePlace(h){try{var d=JSON.parse(localStorage.getItem('uns-last')||'null');if(!d||!d.r)return;if((!h||h==='home')&&W.U.screens[d.r])S.route=d.r;if(d.r===S.route&&d.u)KEEP.forEach(function(k){if(d.u[k]!==undefined)S.ui[k]=d.u[k];});}catch(e){}}
+function restorePlace(h){try{var d=JSON.parse(localStorage.getItem('uns-last')||'null');if(!d||!d.r)return;if(d.r==='more'&&window.matchMedia&&!matchMedia('(max-width:760px)').matches)return;if((!h||h==='home')&&W.U.screens[d.r])S.route=d.r;if(d.r===S.route&&d.u)KEEP.forEach(function(k){if(d.u[k]!==undefined)S.ui[k]=d.u[k];});}catch(e){}}
 var H={sheet:false};   // true while an open sheet owns one extra history step, so the back gesture closes it
 function sheetClosed(){var sh=$('sheet'),sc=$('scrim');sh.hidden=true;sc.hidden=true;if(H.sheet){H.sheet=false;try{history.back();}catch(e){}}}
 function renderSheet(){
@@ -275,7 +275,7 @@ W.U.start=init;
 function init(){
   $('who').addEventListener('change',function(){S.who=$('who').value;render();});
   var h=(location.hash||'').replace('#','');
-  if(h==='client'){S.door='client';}else{if(W.U.screens[h]){S.route=h;}restorePlace(h);}
+  if(h==='client'){S.door='client';}else{if(W.U.screens[h]&&!(h==='more'&&window.matchMedia&&!matchMedia('(max-width:760px)').matches)){S.route=h;}restorePlace(h);}
   render();
   try{history.replaceState({r:S.route},'','#'+(S.door==='client'?'client':S.route));}catch(e){}
 }

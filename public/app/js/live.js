@@ -184,7 +184,49 @@
   };
 
   /* ---------- LEADS ---------- */
+  function addLeadForm(lf) {
+    return '<div class="card"><h3 style="margin-bottom:8px">Add a lead</h3><div class="stack" style="gap:10px"><div class="row">'
+        + '<label class="f" style="flex:1;min-width:180px">Name<input id="a_name"></label><label class="f" style="flex:1;min-width:180px">Company<input id="a_co"></label>'
+        + '<label class="f">Owner<select id="a_own">' + opts(OWN, ME.name) + '</select></label></div>'
+        + '<div class="row"><label class="f">List<select id="a_list">' + opts(LISTS, lf === 'any' ? 'any' : 'icp') + '</select></label><label class="f" style="flex:1;min-width:160px">Industry (any industry list)<input id="a_ind" maxlength="80"></label></div>'
+        + '<label class="f">Where do they start?<select id="a_start"><option value="comment">1st degree: start at First comment</option><option value="sent">Cold: connection request sent</option></select></label>'
+        + '<label class="f">LinkedIn profile link<input id="a_url" placeholder="https://www.linkedin.com/in/..."></label>'
+        + '<label class="f">X link (optional)<input id="a_x" placeholder="https://x.com/..."></label>'
+        + '<label class="f">Why they fit (active, personal brand matters, weak profile, location)<input id="a_why"></label>'
+        + '<div class="row"><button type="button" class="btn pri" data-act="laddsave">Add lead</button><button type="button" class="btn" data-act="laddtoggle">Cancel</button></div></div></div>';
+  }
+  /* Phone Leads (1.4.0): approved mobile layout. Search, Due / All / Away, owner chips, groups by urgency. */
+  var deskLeads;
+  U.phoneLeads = function () {
+    var lf = S.ui.llist || 'icp';
+    var pv = S.ui.pview || 'due', of = S.ui.lown || 'All', q = String(S.ui.lq || '').trim().toLowerCase();
+    var h = '<div class="plh"><h1>' + (lf === 'watch' ? 'Watchlist' : 'Leads') + '</h1><button type="button" class="btn pri" data-act="laddtoggle">' + (S.ui.ladd ? 'Cancel' : 'Add lead') + '</button></div>';
+    if (S.ui.ladd) h += addLeadForm(lf);
+    var lists = [['icp', 'ICP'], ['any', 'Any industry'], ['all', 'Both'], ['watch', 'Watchlist']];
+    h += '<div class="psteps" role="group" aria-label="Lead list">' + lists.map(function (v) { return '<button type="button" class="pchip' + (lf === v[0] ? ' on' : '') + '" data-act="llistsel" data-id="' + v[0] + '" aria-pressed="' + (lf === v[0]) + '">' + v[1] + '</button>'; }).join('') + '</div>';
+    if (lf === 'watch') return '<div class="phone-leads">' + h + phoneWatchBody() + '</div>';
+    h += '<input class="psearch" type="search" data-chg="lq" value="' + esc(S.ui.lq || '') + '" placeholder="Search name or company" aria-label="Search leads" enterkeyhint="search">';
+    h += '<div class="psteps" role="group" aria-label="Show">' + [['due', 'Due'], ['all', 'All'], ['away', 'Away']].map(function (v) { return '<button type="button" class="pchip' + (pv === v[0] ? ' on' : '') + '" data-act="pview" data-id="' + v[0] + '" aria-pressed="' + (pv === v[0]) + '">' + v[1] + '</button>'; }).join('')
+      + '<span class="psep"></span>' + [['All', 'Everyone']].concat([[ME.name, 'Me']]).concat(OWN.filter(function (o) { return o !== ME.name; }).map(function (o) { return [o, o]; })).map(function (v) { return '<button type="button" class="pchip' + (of === v[0] ? ' on' : '') + '" data-act="pown" data-id="' + esc(v[0]) + '" aria-pressed="' + (of === v[0]) + '">' + esc(v[1]) + '</button>'; }).join('') + '</div>';
+    var ls = L.leads.filter(function (l) {
+      if (of !== 'All' && l.owner !== of) return false;
+      if (lf !== 'all' && (l.list || 'icp') !== lf) return false;
+      if (q && (String(l.name) + ' ' + String(l.company || '')).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+    function row(l) {
+      var w = when(l.next_due);
+      return '<button type="button" class="pitem" data-act="lopen" data-id="' + esc(l.id) + '">' + av('lead', l) + '<span class="mn"><b>' + esc(l.name) + '</b><small>' + esc((l.company ? l.company + ' · ' : '') + lab(STAGES, l.stage)) + '</small></span>' + (l.stage === 'away' ? pill('Away', 'mut') : pill(w.t, w.c)) + '</button>';
+    }
+    function grp(t, a, c) { return a.length ? '<div class="pgh' + (c ? ' ' + c : '') + '"><b>' + t + '</b><i>' + a.length + '</i></div><div class="pcard">' + a.map(row).join('') + '</div>' : ''; }
+    var open = ls.filter(isOpen).sort(function (a, b) { return String(a.next_due || '9999').localeCompare(String(b.next_due || '9999')); }), body = '';
+    if (pv === 'away') body = grp('Away', ls.filter(function (l) { return l.stage === 'away'; }));
+    else if (pv === 'all') body = STAGES.filter(function (s) { return s[0] !== 'away'; }).map(function (s) { return grp(s[1], open.filter(function (l) { return l.stage === s[0]; })); }).join('');
+    else body = grp('Overdue', open.filter(function (l) { return l.next_due && l.next_due < L.today; }), 'bad') + grp('Due today', open.filter(function (l) { return l.next_due === L.today; })) + grp('Coming up', open.filter(function (l) { return l.next_due && l.next_due > L.today; })) + grp('No date set', open.filter(function (l) { return !l.next_due; }));
+    return '<div class="phone-leads">' + h + (body || '<div class="pcard pempty">' + (pv === 'away' ? 'Nobody is parked or dropped.' : q ? 'No leads match.' : 'Nothing here.') + '</div>') + '</div>' + drawer();
+  };
   U.screens.leads = function () {
+    if (window.matchMedia && matchMedia('(max-width:760px)').matches) return U.phoneLeads();
     var view = S.ui.lview || 'board', of = S.ui.lown || 'All';
     var lf = S.ui.llist || 'icp';
     var ls = L.leads.filter(function (l) { return (of === 'All' || l.owner === of) && (lf === 'all' || (l.list || 'icp') === lf); });
@@ -194,17 +236,7 @@
     }
     var h = head('Leads', 'The warm funnel: connect, comment, DM, guide, pitch the call. One owner per lead.',
       '<button type="button" class="btn pri" data-act="laddtoggle">Add lead</button>');
-    if (S.ui.ladd) {
-      h += '<div class="card"><h3 style="margin-bottom:8px">Add a lead</h3><div class="stack" style="gap:10px"><div class="row">'
-        + '<label class="f" style="flex:1;min-width:180px">Name<input id="a_name"></label><label class="f" style="flex:1;min-width:180px">Company<input id="a_co"></label>'
-        + '<label class="f">Owner<select id="a_own">' + opts(OWN, ME.name) + '</select></label></div>'
-        + '<div class="row"><label class="f">List<select id="a_list">' + opts(LISTS, lf === 'any' ? 'any' : 'icp') + '</select></label><label class="f" style="flex:1;min-width:160px">Industry (any industry list)<input id="a_ind" maxlength="80"></label></div>'
-        + '<label class="f">Where do they start?<select id="a_start"><option value="comment">1st degree: start at First comment</option><option value="sent">Cold: connection request sent</option></select></label>'
-        + '<label class="f">LinkedIn profile link<input id="a_url" placeholder="https://www.linkedin.com/in/..."></label>'
-        + '<label class="f">X link (optional)<input id="a_x" placeholder="https://x.com/..."></label>'
-        + '<label class="f">Why they fit (active, personal brand matters, weak profile, location)<input id="a_why"></label>'
-        + '<div class="row"><button type="button" class="btn pri" data-act="laddsave">Add lead</button><button type="button" class="btn" data-act="laddtoggle">Cancel</button></div></div></div>';
-    }
+    if (S.ui.ladd) h += addLeadForm(lf);
     h += '<div class="row"><div class="seg" role="group" aria-label="Lead list">' + [['icp', 'ICP'], ['any', 'Any industry'], ['all', 'Both'], ['watch', 'Watchlist']].map(function (v) { return '<button type="button" data-act="llistsel" data-id="' + v[0] + '" aria-pressed="' + (lf === v[0]) + '">' + v[1] + '</button>'; }).join('') + '</div></div>';
     if (lf === 'any') h += '<div class="banner">Any industry: people who are not our ICP but can afford the service. Same steps as the ICP list, kept apart so it can win the first client.</div>';
     h += '<div class="row"><div class="seg" role="group">' + [['board', 'Board'], ['all', 'All'], ['away', 'Away']].map(function (v) { return '<button type="button" data-act="lview" data-id="' + v[0] + '" aria-pressed="' + (view === v[0]) + '">' + v[1] + '</button>'; }).join('') + '</div>'
@@ -271,7 +303,25 @@
     }
     return h + '</article>';
   }
+  /* Phone Tasks (1.4.0): same task cards and editor, grouped by urgency, chips instead of dropdowns. */
+  U.phoneTasks = function () {
+    var who = S.ui.tkWho || 'all', showDone = S.ui.tkDone === 'show';
+    var ts = L.tasks.filter(tvisible);
+    var h = '<div class="plh"><h1>Tasks</h1></div>';
+    h += '<div class="pcard ptkadd"><input id="tk_q" data-enter="tkadd" placeholder="What needs doing?" maxlength="200" aria-label="New task title"><div class="row" style="gap:8px;flex-wrap:nowrap"><select id="tk_o" aria-label="Owner">' + opts(OWN.concat('Everyone'), ME.name) + '</select><button type="button" class="btn pri" data-act="tkadd">Add task</button></div></div>';
+    var whos = [['all', 'Everyone'], ['me', 'Mine']].concat(OWN.filter(function (o) { return o !== ME.name; }).map(function (o) { return [o, o]; }));
+    h += '<div class="psteps" role="group" aria-label="Whose tasks">' + whos.map(function (v) { return '<button type="button" class="pchip' + (who === v[0] ? ' on' : '') + '" data-act="ptkwho" data-id="' + esc(v[0]) + '" aria-pressed="' + (who === v[0]) + '">' + esc(v[1]) + '</button>'; }).join('')
+      + '<span class="psep"></span><button type="button" class="pchip' + (showDone ? ' on' : '') + '" data-act="ptkdone" aria-pressed="' + showDone + '">Show done</button></div>';
+    var open = ts.filter(function (t) { return t.status !== 'done'; }).sort(tsort);
+    function grp(t, a, c) { return a.length ? '<div class="pgh' + (c ? ' ' + c : '') + '"><b>' + t + '</b><i>' + a.length + '</i></div><section class="tk-group">' + a.map(tcard).join('') + '</section>' : ''; }
+    var late = open.filter(tlate), td = open.filter(function (t) { return t.due === L.today; }), rest = open.filter(function (t) { return !tlate(t) && t.due !== L.today; });
+    var body = grp('Overdue', late, 'bad') + grp('Due today', td)
+      + grp('Doing', rest.filter(function (t) { return t.status === 'doing'; })) + grp('To do', rest.filter(function (t) { return t.status === 'todo'; })) + grp('Blocked', rest.filter(function (t) { return t.status === 'blocked'; }), 'bad');
+    if (showDone) body += grp('Done', ts.filter(function (t) { return t.status === 'done'; }).sort(tsort));
+    return '<div class="phone-leads">' + h + (body || '<div class="pcard pempty">Nothing open here.</div>') + '</div>';
+  };
   U.screens.tasks = function () {
+    if (window.matchMedia && matchMedia('(max-width:760px)').matches && (S.ui.tkView || 'list') === 'list') return U.phoneTasks();
     var view = S.ui.tkView || 'list', who = S.ui.tkWho || 'all', area = S.ui.tkArea || '', showDone = S.ui.tkDone === 'show';
     var ts = L.tasks.filter(tvisible), out = '';
     if (view === 'list') {
@@ -368,6 +418,35 @@
       + '<section class="card stack" style="gap:8px" aria-label="Blocked"><div class="row" style="justify-content:space-between"><h2>Blocked</h2>' + pill(String(blocked.length), blocked.length ? 'warn' : 'mut') + '</div>' + (blocked.length ? '<div class="list">' + blocked.slice(0, 4).map(function (t) { return '<div class="item"><div class="mn"><div class="t">' + esc(t.title) + '</div><div class="d">' + esc(t.owner) + '</div></div></div>'; }).join('') + '</div>' : '<div class="empty">Nothing is blocked.</div>') + '</section>';
     return '<div class="stack">' + h + '<div class="tday"><div class="stack">' + left + '</div><div class="stack">' + right + '</div></div>' + drawer() + '</div>';
   };
+  /* Phone Dashboard (1.4.0): the approved mobile layout, built from the same live data. */
+  U.phoneHome = function () {
+    var who = ME.name, q = queue(who), eg = engageList(who);
+    var tk = L.tasks.filter(function (t) { return t.status !== 'done' && (t.owner === who || t.owner === 'Everyone'); });
+    var tkLate = tk.filter(tlate), tkDue = tk.filter(function (t) { return t.due && t.due <= L.today; });
+    var lateL = q.filter(function (l) { return l.next_due && l.next_due < L.today; });
+    var dueN = q.length + tkDue.length, lateN = lateL.length + tkLate.length;
+    var tg = wtarget(), wd = wdone(who), wl = watchLeft(who), pc = tg ? Math.min(100, Math.round(wd / tg * 100)) : 100, C = 2 * Math.PI * 26;
+    var hr = new Date().getHours(), hello = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+    var first = lateL[0] || q[0];
+    var h = '<div class="pgreet">' + hello + ', ' + esc(who) + '</div><h1 class="pdash">Dashboard</h1>' + relBanner();
+    h += first
+      ? '<div class="phero"><span class="eyebrow">Do this first</span><b>Follow up with ' + esc(first.name) + '</b><small>' + esc(first.next_action || lab(STAGES, first.stage)) + ' &middot; ' + esc(when(first.next_due).t) + '</small><button type="button" class="btn" data-act="lopen" data-id="' + esc(first.id) + '">Open lead</button></div>'
+      : '<div class="phero"><span class="eyebrow">All clear</span><b>Nothing overdue. Nice work.</b><small>Add a lead or work through the Watchlist.</small><button type="button" class="btn" data-act="tgo" data-id="leads:add">Add lead</button></div>';
+    h += '<div class="pprog"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--tint)" stroke-width="8"/><circle cx="32" cy="32" r="26" fill="none" stroke="var(--brand)" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + (C * pc / 100).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-size="15" font-weight="800" fill="var(--fg)">' + pc + '%</text></svg><div><b>' + wd + ' of ' + tg + ' Watchlist comments</b><small>' + (wl ? wl + ' to go today.' : 'Done for today.') + '</small></div></div>';
+    var tiles = [['warn', 'Overdue', lateN, 'Leads and tasks late', 'leads'], ['blue', 'Due today', dueN, 'To contact or do', 'leads'], ['green', 'Open tasks', tk.length, 'Yours', 'tasks'], ['', 'Engage', eg.length, 'Comments today', 'home']];
+    h += '<div class="ptiles">' + tiles.map(function (t) { return '<button type="button" class="ptile ' + t[0] + '" data-act="tgo" data-id="' + t[4] + '"><span class="eyebrow">' + t[1] + '</span><b class="n">' + t[2] + '</b><small>' + t[3] + '</small></button>'; }).join('') + '</div>';
+    if (eg.length) h += '<div class="pgh"><b>Engage today</b><i>' + eg.length + '</i></div><div class="pcard">' + eg.slice(0, 6).map(function (l) {
+      var n = engageNum(l);
+      return '<div class="pitem">' + av('lead', l) + '<button type="button" class="mn" data-act="lopen" data-id="' + esc(l.id) + '"><b>' + esc(l.name) + '</b><small>Touch ' + n + ' of 5</small></button><button type="button" class="btn sm" data-act="engskip" data-id="' + esc(l.id) + '" data-n="' + n + '">Skip</button><button type="button" class="btn pri sm" data-act="engdone" data-id="' + esc(l.id) + '" data-n="' + n + '">Done</button></div>';
+    }).join('') + '</div>';
+    if (q.length) h += '<div class="pgh"><b>Follow up</b><i>' + q.length + '</i></div><div class="pcard">' + q.slice(0, 5).map(function (l) {
+      var w = when(l.next_due);
+      return '<button type="button" class="pitem" data-act="lopen" data-id="' + esc(l.id) + '">' + av('lead', l) + '<span class="mn"><b>' + esc(l.name) + '</b><small>' + esc(l.company || lab(STAGES, l.stage)) + '</small></span>' + pill(w.t, w.c) + '</button>';
+    }).join('') + '</div>';
+    var nt = tk.slice().sort(function (a, b) { return String(a.due || '9999').localeCompare(String(b.due || '9999')); }).slice(0, 3);
+    h += '<div class="pgh"><b>Next tasks</b><i>' + nt.length + '</i></div>' + (nt.length ? '<div class="pcard">' + nt.map(function (t) { var w = when(t.due); return '<button type="button" class="pitem" data-act="tgo" data-id="tasks"><span class="mn"><b>' + esc(t.title) + '</b><small>' + esc(t.owner) + '</small></span>' + pill(w.t, w.c) + '</button>'; }).join('') + '</div>' : '<div class="pcard pempty">No open tasks.</div>');
+    return '<div class="phone-dash">' + h + '</div>' + drawer();
+  };
   U.screens.followups = U.screens.home;
 
   /* ---------- MY ACCOUNT ---------- */
@@ -444,6 +523,39 @@
       + (!w.lead_id ? '<button type="button" class="btn sm" data-act="wlead" data-id="' + esc(w.id) + '">Make lead</button>' : '')
       + (opt.full ? '<button type="button" class="btn sm' + (w.active ? '' : ' pri') + '" data-act="wactive" data-id="' + esc(w.id) + '" data-on="' + (w.active ? 0 : 1) + '">' + (w.active ? 'Hide' : 'Show') + '</button>' : '')
       + '</div></div>';
+  }
+  /* Phone Watchlist (1.4.0) */
+  function pwrow(w, full) {
+    var done = wcommentedToday(w.id);
+    var nm = '<a href="' + esc(w.profile_url) + '" target="_blank" rel="noopener noreferrer">' + esc(w.name) + '</a>';
+    return '<div class="pitem pw' + (done ? ' done' : '') + '">' + av('watch', w, true) + '<div class="mn"><b>' + nm + '</b><small>' + esc(lab(W_KIND, w.kind)) + '. Last ' + wago(w) + (full ? '. ' + esc(w.owner) : '') + (w.lead_id ? '. Lead' : '') + '</small>'
+      + '<span class="pwx">' + cpb(w) + (!w.lead_id ? '<button type="button" class="btn sm" data-act="wlead" data-id="' + esc(w.id) + '">Make lead</button>' : '') + (full ? '<button type="button" class="btn sm' + (w.active ? '' : ' pri') + '" data-act="wactive" data-id="' + esc(w.id) + '" data-on="' + (w.active ? 0 : 1) + '">' + (w.active ? 'Hide' : 'Show') + '</button>' : '') + '</span></div>'
+      + (full ? '' : done ? '<button type="button" class="btn sm" data-act="wundo" data-id="' + esc(w.id) + '">Undo</button>' : '<button type="button" class="btn pri sm" data-act="wdone" data-id="' + esc(w.id) + '">Commented</button>') + '</div>';
+  }
+  function phoneWatchBody() {
+    var tab = S.ui.wtab || 'today', who = S.ui.wwho || ME.name, tg = wtarget(), wd = wdone(who), pc = tg ? Math.min(100, Math.round(wd / tg * 100)) : 100, C = 2 * Math.PI * 26;
+    var h = '<div class="pprog"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--tint)" stroke-width="8"/><circle cx="32" cy="32" r="26" fill="none" stroke="var(--brand)" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + (C * pc / 100).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-size="15" font-weight="800" fill="var(--fg)">' + pc + '%</text></svg><div><b>' + esc(who) + ': ' + wd + ' of ' + tg + '</b><small>Team today: ' + OWN.map(function (o) { return esc(o) + ' ' + wdone(o); }).join(', ') + '</small></div></div>';
+    h += '<div class="psteps" role="group" aria-label="Watchlist view">' + [['today', 'Today'], ['all', 'All people'], ['add', 'Add people']].map(function (t) { return '<button type="button" class="pchip' + (tab === t[0] ? ' on' : '') + '" data-act="wtab" data-id="' + t[0] + '" aria-pressed="' + (tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div>';
+    if (tab === 'today') {
+      var b = wbatch(who), left = Math.max(0, tg - wd), shown = b.slice(0, left);
+      var dn = (L.watch || []).filter(function (w) { return w.owner === who && wcommentedToday(w.id); });
+      h += '<div class="psteps" role="group" aria-label="Whose list">' + OWN.map(function (o) { return '<button type="button" class="pchip' + (who === o ? ' on' : '') + '" data-act="pwwho" data-id="' + esc(o) + '" aria-pressed="' + (who === o) + '">' + esc(o) + '</button>'; }).join('') + '</div>';
+      h += shown.length ? '<div class="pgh"><b>To comment on</b><i>' + shown.length + (b.length > shown.length ? ' of ' + b.length : '') + '</i></div><div class="pcard">' + shown.map(function (w) { return pwrow(w); }).join('') + '</div>' : '<div class="pcard pempty">' + (b.length ? 'Target reached for today. Nice work.' : 'Nobody on this list yet. Add people.') + '</div>';
+      if (dn.length) h += '<div class="pgh"><b>Done today</b><i>' + dn.length + '</i></div><div class="pcard">' + dn.map(function (w) { return pwrow(w); }).join('') + '</div>';
+    } else if (tab === 'all') {
+      var q = (S.ui.wq || '').toLowerCase(), of = S.ui.wown || 'All';
+      var all = (L.watch || []).filter(function (w) { return w.active && (of === 'All' || w.owner === of) && (!q || w.name.toLowerCase().indexOf(q) >= 0); });
+      h += '<input class="psearch" id="w_q" data-enter="wsearch" placeholder="Search by name, press Enter" value="' + esc(S.ui.wq || '') + '" enterkeyhint="search">';
+      h += '<div class="psteps">' + ['All'].concat(OWN).map(function (o) { return '<button type="button" class="pchip' + (of === o ? ' on' : '') + '" data-act="pwown" data-id="' + esc(o) + '" aria-pressed="' + (of === o) + '">' + esc(o === 'All' ? 'Everyone' : o) + '</button>'; }).join('') + '</div>';
+      h += '<div class="pgh"><b>People</b><i>' + all.length + (all.length > 100 ? ', first 100' : '') + '</i></div><div class="pcard">' + (all.slice(0, 100).map(function (w) { return pwrow(w, true); }).join('') || '<div class="pempty">No one matches.</div>') + '</div>';
+    } else {
+      h += '<div class="pcard" style="padding:14px"><div class="stack" style="gap:10px"><div class="sm">Paste LinkedIn profile links, one per line. To give a name, write it first: <code>Jane Doe, https://www.linkedin.com/in/jane</code>. Links already on the list are skipped.</div>'
+        + '<textarea id="w_paste" rows="7" placeholder="https://www.linkedin.com/in/..."></textarea>'
+        + '<div class="row" style="gap:8px"><label class="f" style="flex:1">Whose<select id="w_own">' + opts([['split', 'Split evenly']].concat(OWN.map(function (o) { return [o, o]; })), 'split') + '</select></label>'
+        + '<label class="f" style="flex:1">Type<select id="w_kind">' + opts(W_KIND, 'outlier') + '</select></label></div>'
+        + '<button type="button" class="btn pri" data-act="wadd">Add to the Watchlist</button></div></div>';
+    }
+    return h;
   }
   function watchBody() {
     var tab = S.ui.wtab || 'today', who = S.ui.wwho || ME.name, tg = wtarget();
@@ -575,6 +687,12 @@
     if (U.go) { U.go(p[0]); } else { S.route = p[0]; S.ui.draw = false; U.render(); }
   };
   A.llistsel = function (el) { S.ui.llist = el.getAttribute('data-id'); U.render(); };
+  A.ptkwho = function (el) { S.ui.tkWho = el.getAttribute('data-id'); U.render(); };
+  A.ptkdone = function () { S.ui.tkDone = S.ui.tkDone === 'show' ? 'hide' : 'show'; U.render(); };
+  A.pwwho = function (el) { S.ui.wwho = el.getAttribute('data-id'); U.render(); };
+  A.pwown = function (el) { S.ui.wown = el.getAttribute('data-id'); U.render(); };
+  A.pview = function (el) { S.ui.pview = el.getAttribute('data-id'); U.render(); };
+  A.pown = function (el) { S.ui.lown = el.getAttribute('data-id'); U.render(); };
   A.lview = function (el) { S.ui.lview = el.getAttribute('data-id'); U.render(); };
   A.laddtoggle = function () { S.ui.ladd = !S.ui.ladd; U.render(); };
   A.lcopy = function (el) { U.copy(el.getAttribute('data-url'), el); };
@@ -658,6 +776,7 @@
     else if (k === 'wowner') run(api('PATCH', '/watch/' + id, { owner: v }));
     else if (k === 'wkind') run(api('PATCH', '/watch/' + id, { kind: v }));
     else if (k === 'lown') { S.ui.lown = v; U.render(); }
+    else if (k === 'lq') { S.ui.lq = v; U.render(); }
     else if (k === 'fuwho') { S.ui.fuWho = v; U.render(); }
     else if (k === 'tkwho') { S.ui.tkWho = v; U.render(); }
     else if (k === 'tkfarea') { S.ui.tkArea = v; U.render(); }

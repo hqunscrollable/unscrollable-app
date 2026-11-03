@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) process.exitCode = 1; };
 const B = 'http://localhost:8787'; const PW = 'test-pass-123456';
-const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 390, height: 900 }, deviceScaleFactor: 2 });
+const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 1100, height: 900 }, deviceScaleFactor: 2 });
 await ctx.grantPermissions(['clipboard-read','clipboard-write']);
 const pg = await ctx.newPage(); const errs = []; pg.on('pageerror', e => errs.push(String(e)));
 await pg.goto(B + '/app/login.html'); await pg.fill('#id', 'tabish'); await pg.fill('#pw', PW); await pg.click('#go'); await pg.waitForURL('**/app/');
