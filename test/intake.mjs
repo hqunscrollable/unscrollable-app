@@ -10,7 +10,7 @@ for (const [label, vp] of [['desktop', { width: 1100, height: 900 }], ['phone', 
   ok(label + ': Intake screen opens', /Intake/.test(await pg.textContent('#main')));
   const T = 'Traits ' + label + Date.now();
   await pg.click('[data-act=innew][data-id="1"]');
-  await pg.fill('#in_t', T); await pg.fill('#in_a', 'test form');
+  await pg.fill('#in_t', T); await pg.fill('#in_a', 'test form'); await pg.selectOption('#in_w', 'contractor');
   await pg.fill('#in_q', 'What do you do best?\nlong: A good week?\npick: Work style | Mornings, Evenings');
   await pg.click('[data-act=infcreate]'); await pg.waitForTimeout(1500);
   ok(label + ': form created and opened', (await pg.textContent('#main')).includes(T) && /3 questions/.test(await pg.textContent('#main')));

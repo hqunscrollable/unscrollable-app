@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.6.0', date: '4 Nov 2026', title: 'Founder Alignment and Founder Traits are now inside Intake',
+    what: 'Both founder forms are real Intake forms now. You answer one question at a time, with a progress bar, and your draft is kept if you leave. Your old answers were imported.',
+    does: 'Alignment shows the three of you side by side with tags: shared, aligned, differs, close, apart. Traits gives you a 0 to 100 profile, where you help most, where you need cover, and a team view that shows who covers what. Others stay hidden until all three have answered. You can edit your own answers any time.',
+    friction: 'No more separate artifact links. Ali and Mehak just log in and press Answer.',
+    where: 'Intake, now in the Daily group of the menu (More on phone).' },
   { v: '1.5.1', date: '4 Nov 2026', title: 'Save to UNS finds people when the link is different',
     what: 'If the LinkedIn link saved on a lead does not match the page you are on, the button now matches by name, as long as only one person has that name.',
     does: 'It saves the photo and fixes the saved link to the one on the page. Two people with the same name are never guessed. The button says when it matched by name.',

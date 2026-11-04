@@ -558,37 +558,56 @@ async function devInfo(env, user) {
 // ---------- Build dashboard (Tabish only): STATUS.json from the repo plus internal notes ----------
 const NOTE_TAGS = ['Idea', 'Decision', 'Remember', 'Bug', 'Question'];
 // ---------- intake (founder side) ----------
-const IN_AUD = ['founder', 'contractor', 'client'], IN_TYPES = ['short', 'long', 'pick'];
+const IN_AUD = ['founder', 'contractor', 'client'], IN_TYPES = ['short', 'long', 'pick', 'multi', 'slider'];
+const cleanStr = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 function intakeFields(raw) {
   if (!Array.isArray(raw)) return null;
-  const out = [];
-  for (const f of raw.slice(0, 40)) {
-    const label = str(f && f.label, 200); if (!label || !label.trim()) continue;
+  const out = [], seen = new Set();
+  for (const f of raw.slice(0, 60)) {
+    const label = cleanStr(f && f.label, 300); if (!label) continue;
     const type = IN_TYPES.includes(f.type) ? f.type : 'short';
-    const o = { id: 'q' + (out.length + 1), label: label.trim(), type };
-    if (type === 'pick') { o.options = (Array.isArray(f.options) ? f.options : []).map(x => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 12); if (o.options.length < 2) return null; }
+    let fid = /^[a-z][a-z0-9_]{0,23}$/.test(String(f.id || '')) ? String(f.id) : 'q' + (out.length + 1);
+    if (seen.has(fid)) fid = 'q' + (out.length + 1); seen.add(fid);
+    const o = { id: fid, type, label };
+    if (f.section) o.section = cleanStr(f.section, 60);
+    if (f.ph) o.ph = cleanStr(f.ph, 120);
+    if (f.style) o.style = cleanStr(f.style, 60);
+    if (f.own) o.own = cleanStr(f.own, 80);
+    if (type === 'pick' || type === 'multi') {
+      o.options = (Array.isArray(f.options) ? f.options : []).map(x => cleanStr(x, 100)).filter(Boolean).slice(0, 20);
+      if (o.options.length < 2) return null;
+      if (type === 'multi' && f.exact) o.exact = Math.min(+f.exact | 0, o.options.length);
+      if (type === 'pick' && Array.isArray(f.weights) && f.weights.length === o.options.length) o.weights = f.weights.map(w => (w && typeof w === 'object' ? w : {}));
+    }
+    if (type === 'slider') {
+      o.min = +f.min || 0; o.max = +f.max || 100; if (o.max <= o.min) return null;
+      o.def = Math.min(o.max, Math.max(o.min, f.def == null ? Math.round((o.min + o.max) / 2) : +f.def));
+      o.unit = cleanStr(f.unit, 12); o.lo = cleanStr(f.lo, 40); o.hi = cleanStr(f.hi, 40);
+      if (f.w && typeof f.w === 'object') o.w = f.w;
+    }
     out.push(o);
   }
   return out.length ? out : null;
 }
+function intakeConfig(c) { if (!c || typeof c !== 'object') return null; const t = JSON.stringify(c); return t.length > 20000 ? null : t; }
 async function intakeAll(env) {
   const [f, r] = await Promise.all([
     env.DB.prepare('SELECT * FROM intake_forms ORDER BY created_at DESC').all(),
     env.DB.prepare('SELECT * FROM intake_responses ORDER BY created_at DESC LIMIT 1000').all()
   ]);
   return json({
-    forms: f.results.map(x => ({ ...x, fields: JSON.parse(x.fields) })),
+    forms: f.results.map(x => ({ ...x, fields: JSON.parse(x.fields), config: x.config ? JSON.parse(x.config) : {} })),
     responses: r.results.map(x => ({ ...x, answers: JSON.parse(x.answers) }))
   });
 }
 async function intakeFormCreate(env, user, req) {
   const b = await readJson(req);
   const title = str(b.title, 120); if (!title || !title.trim()) return bad('Give the form a title.');
-  const fields = intakeFields(b.fields); if (!fields) return bad('Add at least one question. A pick question needs two or more choices.');
+  const fields = intakeFields(b.fields); if (!fields) return bad('Add at least one question. A pick or multi question needs two or more choices.');
   const aud = IN_AUD.includes(b.audience) ? b.audience : 'founder';
   const fid = id('if_'), t = nowIso();
-  await env.DB.prepare('INSERT INTO intake_forms(id,title,about,audience,status,fields,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
-    .bind(fid, title.trim(), str(b.about, 500), aud, 'open', JSON.stringify(fields), user.name, t, t).run();
+  await env.DB.prepare('INSERT INTO intake_forms(id,title,about,audience,status,fields,config,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .bind(fid, title.trim(), str(b.about, 500), aud, 'open', JSON.stringify(fields), intakeConfig(b.config), user.name, t, t).run();
   await log(env, user.login_id, 'intake_form_created', 'intake_form', fid, title);
   return json({ id: fid });
 }
@@ -601,10 +620,11 @@ async function intakeFormUpdate(env, user, fid, req) {
   if ('title' in b) { const t = str(b.title, 120); if (!t || !t.trim()) return bad('Give the form a title.'); set.push('title = ?'); vals.push(t.trim()); }
   if ('about' in b) { set.push('about = ?'); vals.push(str(b.about, 500)); }
   if ('audience' in b) { if (!IN_AUD.includes(b.audience)) return bad('Bad audience.'); set.push('audience = ?'); vals.push(b.audience); }
+  if ('config' in b) { const c = intakeConfig(b.config); if (!c) return bad('Bad form settings.'); set.push('config = ?'); vals.push(c); }
   if ('fields' in b) {
     const n = await env.DB.prepare('SELECT COUNT(*) c FROM intake_responses WHERE form_id = ?').bind(fid).first();
     if (n.c > 0) return bad('Questions are locked once there are responses. Make a new form instead.');
-    const fields = intakeFields(b.fields); if (!fields) return bad('Add at least one question. A pick question needs two or more choices.');
+    const fields = intakeFields(b.fields); if (!fields) return bad('Add at least one question. A pick or multi question needs two or more choices.');
     set.push('fields = ?'); vals.push(JSON.stringify(fields));
   }
   if (!set.length) return bad('Nothing to change.');
@@ -623,17 +643,39 @@ async function intakeRespCreate(env, user, fid, req) {
   const f = await env.DB.prepare('SELECT * FROM intake_forms WHERE id = ?').bind(fid).first();
   if (!f) return bad('Form not found.', 404);
   if (f.status !== 'open') return bad('This form is closed.');
-  const who = str(b.who, 120); if (!who || !who.trim()) return bad('Say who this response is from.');
+  const own = f.audience === 'founder';
+  let who = own ? user.name : str(b.who, 120);
+  if (!who || !who.trim()) return bad('Say who this response is from.');
+  who = who.trim();
   const fields = JSON.parse(f.fields), a = b.answers && typeof b.answers === 'object' ? b.answers : {}, ans = {};
   for (const q of fields) {
-    const v = a[q.id] == null ? '' : String(a[q.id]).trim().slice(0, q.type === 'long' ? 4000 : 500);
-    if (q.type === 'pick' && v && !q.options.includes(v)) return bad('Pick one of the listed choices for: ' + q.label);
-    if (v) ans[q.id] = v;
+    const v = a[q.id];
+    if (q.type === 'multi') {
+      const arr = Array.isArray(v) ? v.map(x => String(x)) : [];
+      if (arr.some(x => !q.options.includes(x))) return bad('Pick only listed choices for: ' + q.label);
+      if (q.exact && arr.length && arr.length !== q.exact) return bad('Pick exactly ' + q.exact + ' for: ' + q.label);
+      if (arr.length) ans[q.id] = arr;
+    } else if (q.type === 'slider') {
+      if (v === undefined || v === null || v === '') continue;
+      const n = Number(v); if (!Number.isFinite(n) || n < q.min || n > q.max) return bad('Out of range for: ' + q.label);
+      ans[q.id] = n;
+    } else {
+      const t = String(v == null ? '' : v).trim().slice(0, q.type === 'long' ? 4000 : 500);
+      if (q.type === 'pick' && t && !q.options.includes(t)) return bad('Pick one of the listed choices for: ' + q.label);
+      if (t) ans[q.id] = t;
+    }
   }
   if (!Object.keys(ans).length) return bad('Answer at least one question.');
-  const rid = id('ir_'), t = nowIso();
+  const t = nowIso();
+  const old = own ? await env.DB.prepare('SELECT id FROM intake_responses WHERE form_id = ? AND who = ?').bind(fid, who).first() : null;
+  if (old) {
+    await env.DB.prepare('UPDATE intake_responses SET answers = ?, updated_at = ? WHERE id = ?').bind(JSON.stringify(ans), t, old.id).run();
+    await log(env, user.login_id, 'intake_response_updated', 'intake_form', fid, who);
+    return json({ id: old.id, updated: true });
+  }
+  const rid = id('ir_');
   await env.DB.prepare('INSERT INTO intake_responses(id,form_id,who,answers,source,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)')
-    .bind(rid, fid, who.trim(), JSON.stringify(ans), 'founder', user.name, t, t).run();
+    .bind(rid, fid, who, JSON.stringify(ans), 'founder', user.name, t, t).run();
   await log(env, user.login_id, 'intake_response_added', 'intake_form', fid, who);
   return json({ id: rid });
 }
