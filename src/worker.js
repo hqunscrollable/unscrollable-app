@@ -557,6 +557,92 @@ async function devInfo(env, user) {
 }
 // ---------- Build dashboard (Tabish only): STATUS.json from the repo plus internal notes ----------
 const NOTE_TAGS = ['Idea', 'Decision', 'Remember', 'Bug', 'Question'];
+// ---------- intake (founder side) ----------
+const IN_AUD = ['founder', 'contractor', 'client'], IN_TYPES = ['short', 'long', 'pick'];
+function intakeFields(raw) {
+  if (!Array.isArray(raw)) return null;
+  const out = [];
+  for (const f of raw.slice(0, 40)) {
+    const label = str(f && f.label, 200); if (!label || !label.trim()) continue;
+    const type = IN_TYPES.includes(f.type) ? f.type : 'short';
+    const o = { id: 'q' + (out.length + 1), label: label.trim(), type };
+    if (type === 'pick') { o.options = (Array.isArray(f.options) ? f.options : []).map(x => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 12); if (o.options.length < 2) return null; }
+    out.push(o);
+  }
+  return out.length ? out : null;
+}
+async function intakeAll(env) {
+  const [f, r] = await Promise.all([
+    env.DB.prepare('SELECT * FROM intake_forms ORDER BY created_at DESC').all(),
+    env.DB.prepare('SELECT * FROM intake_responses ORDER BY created_at DESC LIMIT 1000').all()
+  ]);
+  return json({
+    forms: f.results.map(x => ({ ...x, fields: JSON.parse(x.fields) })),
+    responses: r.results.map(x => ({ ...x, answers: JSON.parse(x.answers) }))
+  });
+}
+async function intakeFormCreate(env, user, req) {
+  const b = await readJson(req);
+  const title = str(b.title, 120); if (!title || !title.trim()) return bad('Give the form a title.');
+  const fields = intakeFields(b.fields); if (!fields) return bad('Add at least one question. A pick question needs two or more choices.');
+  const aud = IN_AUD.includes(b.audience) ? b.audience : 'founder';
+  const fid = id('if_'), t = nowIso();
+  await env.DB.prepare('INSERT INTO intake_forms(id,title,about,audience,status,fields,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
+    .bind(fid, title.trim(), str(b.about, 500), aud, 'open', JSON.stringify(fields), user.name, t, t).run();
+  await log(env, user.login_id, 'intake_form_created', 'intake_form', fid, title);
+  return json({ id: fid });
+}
+async function intakeFormUpdate(env, user, fid, req) {
+  const b = await readJson(req);
+  const cur = await env.DB.prepare('SELECT * FROM intake_forms WHERE id = ?').bind(fid).first();
+  if (!cur) return bad('Form not found.', 404);
+  const set = [], vals = [];
+  if ('status' in b) { if (!['open', 'closed'].includes(b.status)) return bad('Bad status.'); set.push('status = ?'); vals.push(b.status); }
+  if ('title' in b) { const t = str(b.title, 120); if (!t || !t.trim()) return bad('Give the form a title.'); set.push('title = ?'); vals.push(t.trim()); }
+  if ('about' in b) { set.push('about = ?'); vals.push(str(b.about, 500)); }
+  if ('audience' in b) { if (!IN_AUD.includes(b.audience)) return bad('Bad audience.'); set.push('audience = ?'); vals.push(b.audience); }
+  if ('fields' in b) {
+    const n = await env.DB.prepare('SELECT COUNT(*) c FROM intake_responses WHERE form_id = ?').bind(fid).first();
+    if (n.c > 0) return bad('Questions are locked once there are responses. Make a new form instead.');
+    const fields = intakeFields(b.fields); if (!fields) return bad('Add at least one question. A pick question needs two or more choices.');
+    set.push('fields = ?'); vals.push(JSON.stringify(fields));
+  }
+  if (!set.length) return bad('Nothing to change.');
+  set.push('updated_at = ?'); vals.push(nowIso());
+  await env.DB.prepare(`UPDATE intake_forms SET ${set.join(', ')} WHERE id = ?`).bind(...vals, fid).run();
+  return json({ ok: true });
+}
+async function intakeFormDelete(env, user, fid) {
+  await env.DB.prepare('DELETE FROM intake_responses WHERE form_id = ?').bind(fid).run();
+  await env.DB.prepare('DELETE FROM intake_forms WHERE id = ?').bind(fid).run();
+  await log(env, user.login_id, 'intake_form_deleted', 'intake_form', fid, null);
+  return json({ ok: true });
+}
+async function intakeRespCreate(env, user, fid, req) {
+  const b = await readJson(req);
+  const f = await env.DB.prepare('SELECT * FROM intake_forms WHERE id = ?').bind(fid).first();
+  if (!f) return bad('Form not found.', 404);
+  if (f.status !== 'open') return bad('This form is closed.');
+  const who = str(b.who, 120); if (!who || !who.trim()) return bad('Say who this response is from.');
+  const fields = JSON.parse(f.fields), a = b.answers && typeof b.answers === 'object' ? b.answers : {}, ans = {};
+  for (const q of fields) {
+    const v = a[q.id] == null ? '' : String(a[q.id]).trim().slice(0, q.type === 'long' ? 4000 : 500);
+    if (q.type === 'pick' && v && !q.options.includes(v)) return bad('Pick one of the listed choices for: ' + q.label);
+    if (v) ans[q.id] = v;
+  }
+  if (!Object.keys(ans).length) return bad('Answer at least one question.');
+  const rid = id('ir_'), t = nowIso();
+  await env.DB.prepare('INSERT INTO intake_responses(id,form_id,who,answers,source,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)')
+    .bind(rid, fid, who.trim(), JSON.stringify(ans), 'founder', user.name, t, t).run();
+  await log(env, user.login_id, 'intake_response_added', 'intake_form', fid, who);
+  return json({ id: rid });
+}
+async function intakeRespDelete(env, user, rid) {
+  await env.DB.prepare('DELETE FROM intake_responses WHERE id = ?').bind(rid).run();
+  await log(env, user.login_id, 'intake_response_deleted', 'intake_response', rid, null);
+  return json({ ok: true });
+}
+
 async function buildInfo(env, user) {
   if (!user.is_dev) return bad('Not allowed.', 403);
   const n = await env.DB.prepare('SELECT id, text, tag, pin, created_at, updated_at FROM dev_notes ORDER BY pin DESC, updated_at DESC LIMIT 500').all();
@@ -972,6 +1058,14 @@ async function route(req, env, ctx) {
       if (method === 'DELETE') return avatarDelete(env, user, m[1], m[2]);
     }
     if ((m = api.match(/^\/avatar\/(lead|watch)\/([\w]+)\/fetch$/)) && method === 'POST') return avatarFetch(env, user, m[1], m[2]);
+    if (api === '/intake' && method === 'GET') return intakeAll(env);
+    if (api === '/intake/forms' && method === 'POST') return intakeFormCreate(env, user, req);
+    if ((m = api.match(/^\/intake\/forms\/([\w]+)$/))) {
+      if (method === 'PATCH') return intakeFormUpdate(env, user, m[1], req);
+      if (method === 'DELETE') return intakeFormDelete(env, user, m[1]);
+    }
+    if ((m = api.match(/^\/intake\/forms\/([\w]+)\/responses$/)) && method === 'POST') return intakeRespCreate(env, user, m[1], req);
+    if ((m = api.match(/^\/intake\/responses\/([\w]+)$/)) && method === 'DELETE') return intakeRespDelete(env, user, m[1]);
     if (api === '/tasks' && method === 'POST') return taskCreate(env, user, req);
     if ((m = api.match(/^\/tasks\/([\w]+)$/))) {
       if (method === 'PATCH') return taskUpdate(env, user, m[1], req);

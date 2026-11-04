@@ -1,0 +1,35 @@
+import { chromium } from 'playwright';
+const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) process.exitCode = 1; };
+const B = 'http://localhost:8787'; const PW = 'test-pass-123456';
+const br = await chromium.launch();
+for (const [label, vp] of [['desktop', { width: 1100, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+  const ctx = await br.newContext({ viewport: vp }); const pg = await ctx.newPage(); const errs = []; pg.on('pageerror', e => errs.push(String(e)));
+  await pg.goto(B + '/app/login.html'); await pg.fill('#id', 'tabish'); await pg.fill('#pw', PW); await pg.click('#go'); await pg.waitForURL('**/app/');
+  await pg.waitForTimeout(700);
+  await pg.evaluate(() => { location.hash = '#intake'; }); await pg.waitForTimeout(1200);
+  ok(label + ': Intake screen opens', /Intake/.test(await pg.textContent('#main')));
+  const T = 'Traits ' + label + Date.now();
+  await pg.click('[data-act=innew][data-id="1"]');
+  await pg.fill('#in_t', T); await pg.fill('#in_a', 'test form');
+  await pg.fill('#in_q', 'What do you do best?\nlong: A good week?\npick: Work style | Mornings, Evenings');
+  await pg.click('[data-act=infcreate]'); await pg.waitForTimeout(1500);
+  ok(label + ': form created and opened', (await pg.textContent('#main')).includes(T) && /3 questions/.test(await pg.textContent('#main')));
+  await pg.click('[data-act=inrsave]'); await pg.waitForTimeout(700);
+  ok(label + ': empty response refused', /Not saved/.test(await pg.innerText('body')));
+  await pg.fill('#ir_who', 'Ali'); await pg.fill('#ir_q1', 'Writing'); await pg.selectOption('#ir_q3', 'Mornings');
+  await pg.click('[data-act=inrsave]'); await pg.waitForTimeout(1200);
+  const t = await pg.textContent('#main');
+  ok(label + ': response saved and shown', /Responses \(1\)/.test(t) && t.includes('Writing') && t.includes('Mornings'));
+  const r = await pg.evaluate(async id => (await fetch('/app/api/intake/forms/' + id + '/responses', { method: 'POST', headers: { 'content-type': 'application/json', 'x-uns': '1' }, body: JSON.stringify({ who: 'x', answers: { q3: 'Nope' } }) })).status, await pg.evaluate(() => 0));
+  await pg.click('[data-act=instatus]'); await pg.waitForTimeout(900);
+  ok(label + ': closing shows closed banner', /closed/i.test(await pg.textContent('#main')));
+  await pg.click('[data-act=inopen][data-id=""]'); await pg.waitForTimeout(500);
+  ok(label + ': form listed with 1 response', /1 response\b/.test(await pg.textContent('#main')));
+  await pg.screenshot({ path: '/tmp/intake-' + label + '.png' });
+  await pg.click('.item [data-act=inopen]'); await pg.waitForTimeout(300);
+  await pg.click('[data-act=infdel]'); await pg.click('[data-act=infdel]'); await pg.waitForTimeout(1200);
+  ok(label + ': form deleted', !(await pg.textContent('#main')).includes(T));
+  ok(label + ': no page errors', errs.length === 0); if (errs.length) console.log(errs);
+  await ctx.close();
+}
+await br.close();

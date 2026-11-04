@@ -1,7 +1,7 @@
 // Loads the session and data first, then the app scripts in order, then starts.
 (function () {
   window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.UNS_INSTALL = e; });
-  var SCRIPTS = ['core.js', 'screens_a.js', 'screens_b.js', 'screens_c.js', 'screens_d.js', 'releases.js', 'live.js', 'build.js', 'mobile.js', 'phone.js'];
+  var SCRIPTS = ['core.js', 'screens_a.js', 'screens_b.js', 'screens_c.js', 'screens_d.js', 'releases.js', 'live.js', 'build.js', 'intake.js', 'mobile.js', 'phone.js'];
   function fail() { location.replace('/app/login.html'); }
   function get(path) {
     return fetch(path, { credentials: 'same-origin' }).then(function (r) {

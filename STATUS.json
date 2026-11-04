@@ -1,13 +1,14 @@
 {
   "updated": "2026-11-04",
-  "live": "1.4.0",
-  "built": "1.4.1",
-  "next": "1.4.2",
+  "live": "1.4.1",
+  "built": "1.5.0",
+  "next": "1.5.1",
   "pending_on_pc": [
-    "Drag the new Save to UNS button (1.3.9) and send the message the window shows for Claire",
+    "Deploy 1.5.0: run the migration first (npx wrangler d1 migrations apply uns-app --remote), then deploy",
+    "Drag the new Save to UNS button (1.3.9) for Ali and Mehak",
     "Developer: switch off any Claude access code that was pasted in chat"
   ],
-  "right_now": "1.4.0 is live (phone app). 1.4.1 is built: edit name, company, LinkedIn, X and industry from the lead panel. Waiting for Tabish to deploy.",
+  "right_now": "1.4.1 is live (edit lead details). 1.5.0 is built: Intake screen, founder side, with a new database migration 0010. Waiting for Tabish to deploy.",
   "blocked_on_tabish": [
     "Pick mobile look: playful or premium (needed for the screen pass)",
     "Watchlist for three founders: restate in one sentence",
@@ -18,8 +19,8 @@
   ],
   "next_three": [
     "Mobile screen pass using the saved prototype (needs the look decision)",
-    "Intake database (permanent D1 tables, private /intake link)",
-    "Watchlist for three founders (needs one sentence from Tabish)"
+    "Watchlist for three founders (needs one sentence from Tabish)",
+    "Intake private link page for contractors and clients (/app/intake/<link>)"
   ],
   "phases": [
     {
@@ -196,6 +197,11 @@
   ],
   "changelog": [
     {
+      "v": "1.5.0",
+      "date": "2026-11-04",
+      "text": "Intake screen (founder side): forms with short, long and pick questions, responses, close and reopen. Tables intake_forms and intake_responses (migration 0010). Private link page comes later."
+    },
+    {
       "v": "1.4.1",
       "date": "2026-11-04",
       "text": "Lead panel has a Details block: edit name, company, LinkedIn link, X link and industry after saving."
@@ -249,11 +255,6 @@
       "v": "1.3.2",
       "date": "2026-11-04",
       "text": "Fix: email now sends through Resend over HTTPS, from mail.unscrollable.studio. Errors show the real reason."
-    },
-    {
-      "v": "1.3.2",
-      "date": "2026-11-02",
-      "text": "Build dashboard, STATUS.json, CLAUDE.md, internal notes."
     },
     {
       "v": "1.3.1",

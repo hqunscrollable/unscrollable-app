@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.5.0', date: '4 Nov 2026', title: 'Intake: forms and responses, kept permanently',
+    what: 'A new Intake screen. Make a form (short, long and pick-one questions), add responses, close or reopen it, and read everything in one place.',
+    does: 'Forms and responses are saved in permanent tables, so nothing depends on shared artifacts. Questions lock after the first response. Only the three founders can see it. The private link page for contractors and clients is not built yet.',
+    friction: 'One home for Founder Traits and later contractor and client forms.',
+    where: 'More, then Intake (Business).' },
   { v: '1.4.1', date: '4 Nov 2026', title: 'Edit a lead after you save it',
     what: 'The lead panel now has a Details block: name, company, LinkedIn link, X link and industry, with a Save details button.',
     does: 'Change any of them any time, on desktop and phone. A bad X or LinkedIn link is refused with a plain message. A new LinkedIn link also fetches the photo.',
