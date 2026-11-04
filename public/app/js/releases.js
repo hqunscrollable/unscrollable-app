@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.5.1', date: '4 Nov 2026', title: 'Save to UNS finds people when the link is different',
+    what: 'If the LinkedIn link saved on a lead does not match the page you are on, the button now matches by name, as long as only one person has that name.',
+    does: 'It saves the photo and fixes the saved link to the one on the page. Two people with the same name are never guessed. The button says when it matched by name.',
+    friction: 'No more "not in your Leads" for someone who is.',
+    where: 'The Save to UNS button on a LinkedIn profile.' },
   { v: '1.5.0', date: '4 Nov 2026', title: 'Intake: forms and responses, kept permanently',
     what: 'A new Intake screen. Make a form (short, long and pick-one questions), add responses, close or reopen it, and read everything in one place.',
     does: 'Forms and responses are saved in permanent tables, so nothing depends on shared artifacts. Questions lock after the first response. Only the three founders can see it. The private link page for contractors and clients is not built yet.',

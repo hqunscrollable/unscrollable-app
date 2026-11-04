@@ -42,3 +42,15 @@ await pop.route('**/app/api/avatar/capture', r => { const b = JSON.parse(r.reque
 await pop.waitForLoadState(); await pop.waitForTimeout(1200).catch(() => {});
 ok('popup opened the app photo page', /\/app\/photo\.html/.test(pop.url()) || pop.isClosed());
 await br.close();
+{
+  const nm = 'Jacobtest ' + RND.charAt(0).toUpperCase() + RND.slice(1);
+  const mk = (u) => fetch(B + '/app/api/leads', { method: 'POST', headers: { ...H, cookie }, body: JSON.stringify({ name: nm, company: 'Evergrove', owner: 'Tabish', profile_url: u, stage: 'sent' }) }).then(r => r.json());
+  const L = await mk('https://www.linkedin.com/in/wrong-link-' + RND);
+  const r = await post({ profile_url: 'https://www.linkedin.com/in/jacob-real-' + RND, img_url: 'https://evil.example/a.jpg', name: nm + ' | LinkedIn' });
+  ok('link mismatch falls back to a unique name match', r.by_name === true && r.names.includes(nm));
+  const d = await (await fetch(B + '/app/api/data', { headers: { cookie } })).json();
+  ok('the saved link is corrected to the page link', d.leads.some(x => x.id === L.id && /jacob-real-/.test(x.profile_url)));
+  await mk('https://www.linkedin.com/in/second-' + RND);
+  const r2 = await post({ profile_url: 'https://www.linkedin.com/in/other-slug-' + RND, img_url: 'https://evil.example/a.jpg', name: nm + ' | LinkedIn' });
+  ok('two people with the same name are not guessed', r2.reason === 'nomatch');
+}

@@ -1,14 +1,14 @@
 {
   "updated": "2026-11-04",
   "live": "1.4.1",
-  "built": "1.5.0",
-  "next": "1.5.1",
+  "built": "1.5.1",
+  "next": "1.5.2",
   "pending_on_pc": [
     "Deploy 1.5.0: run the migration first (npx wrangler d1 migrations apply uns-app --remote), then deploy",
     "Drag the new Save to UNS button (1.3.9) for Ali and Mehak",
     "Developer: switch off any Claude access code that was pasted in chat"
   ],
-  "right_now": "1.4.1 is live (edit lead details). 1.5.0 is built: Intake screen, founder side, with a new database migration 0010. Waiting for Tabish to deploy.",
+  "right_now": "1.4.1 is live. 1.5.1 is built (includes 1.5.0 Intake with migration 0010, and the Save to UNS name fallback). Waiting for Tabish to deploy.",
   "blocked_on_tabish": [
     "Pick mobile look: playful or premium (needed for the screen pass)",
     "Watchlist for three founders: restate in one sentence",
@@ -196,6 +196,11 @@
     "Service worker sw.js shipped empty in 1.3.10 and 1.4.0 (a bad file write). Restored from 1.3.9. Check file sizes before zipping."
   ],
   "changelog": [
+    {
+      "v": "1.5.1",
+      "date": "2026-11-04",
+      "text": "Save to UNS falls back to a unique name match when the saved LinkedIn link differs, and fixes the saved link."
+    },
     {
       "v": "1.5.0",
       "date": "2026-11-04",

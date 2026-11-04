@@ -974,6 +974,21 @@ async function avatarCapture(env, user, req) {
     const rows = (await env.DB.prepare(`SELECT id, name, profile_url FROM ${AV_TABLE[kind]} WHERE profile_url LIKE '%linkedin.com/in/%'`).all()).results;
     for (const r of rows) if (liSlug(r.profile_url) === slug) hits.push({ kind, id: r.id, name: r.name, url: r.profile_url });
   }
+  const real0 = String(b.name || '').replace(/^\(\d+\+?\)\s*/, '').split(/\s+[|\u2013\u2014-]\s+/)[0].split(',')[0].replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  let byName = false;
+  if (!hits.length && real0.length >= 3) {
+    // The saved link does not match this page. If exactly one lead or Watchlist person has this name, use them and fix their link.
+    const cand = [];
+    for (const kind of ['lead', 'watch']) {
+      const rows = (await env.DB.prepare(`SELECT id, name, profile_url FROM ${AV_TABLE[kind]} WHERE lower(name) = lower(?)`).bind(real0).all()).results;
+      for (const r of rows) cand.push({ kind, id: r.id, name: r.name, url: r.profile_url });
+    }
+    if (cand.length === 1) {
+      const c = cand[0];
+      try { await env.DB.prepare(`UPDATE ${AV_TABLE[c.kind]} SET profile_url = ? WHERE id = ?`).bind('https://www.linkedin.com/in/' + slug, c.id).run(); await log(env, user.login_id, 'link_fixed', c.kind, c.id, String(c.url || '') + ' to ' + slug); c.url = 'https://www.linkedin.com/in/' + slug; } catch (e) { /* link already used elsewhere, keep the old one */ }
+      hits.push(c); byName = true;
+    }
+  }
   if (!hits.length) return json({ ok: false, reason: 'nomatch' });
   // The Add people box names someone from their link (nate-chenette-123 becomes Natechenette123). Fix that name from the real one on the page, but never overwrite a name a person typed.
   const real = String(b.name || '').replace(/^\(\d+\+?\)\s*/, '').split(/\s+[|\u2013\u2014-]\s+/)[0].split(',')[0].replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
@@ -988,9 +1003,9 @@ async function avatarCapture(env, user, req) {
     }
   }
   const got = await fetchImg(String(b.img_url || ''));
-  if (!got) return json({ ok: false, reason: 'image', names: hits.map(h => h.name), renamed, read: valid ? real : '' });
+  if (!got) return json({ ok: false, reason: 'image', names: hits.map(h => h.name), renamed, read: valid ? real : '', by_name: byName });
   for (const h of hits) { await avatarSave(env, h.kind, h.id, got.mime, got.b64); await log(env, user.login_id, 'avatar_captured', h.kind, h.id); }
-  return json({ ok: true, names: hits.map(h => h.name), renamed, read: valid ? real : '' });
+  return json({ ok: true, names: hits.map(h => h.name), renamed, read: valid ? real : '', by_name: byName });
 }
 async function avatarFetch(env, user, kind, rid) {
   if (!AV_TABLE[kind]) return bad('Not found.', 404);

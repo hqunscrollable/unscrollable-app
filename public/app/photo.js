@@ -14,9 +14,9 @@
   fetch('/app/api/avatar/capture', { method: 'POST', headers: { 'content-type': 'application/json', 'x-uns': '1' }, body: JSON.stringify({ profile_url: u, img_url: i, name: n }) })
     .then(function (r) { if (r.status === 401) throw new Error('signin'); return r.json(); })
     .then(function (r) {
-      if (r.ok) { msg.textContent = 'Saved the photo for ' + r.names.join(', ') + '.' + nameNote(r); cl.hidden = false; setTimeout(function () { window.close(); }, 1500); return; }
+      if (r.ok) { msg.textContent = 'Saved the photo for ' + r.names.join(', ') + '.' + (r.by_name ? ' Matched by name. The saved LinkedIn link did not match this page, so it was updated to this one.' : '') + nameNote(r); cl.hidden = false; setTimeout(function () { window.close(); }, 1500); return; }
       if (r.reason === 'nomatch') fail('This person is not in your Leads or Watchlist yet. Add them first, then click the button again.');
-      else if (r.reason === 'image') fail(nameNote(r).trim() + ' LinkedIn did not let the app download this photo. Right-click the photo, Copy image, then press Ctrl+V on their card in the app.');
+      else if (r.reason === 'image') fail((r.by_name ? 'Matched by name and updated the saved link. ' : '') + nameNote(r).trim() + ' LinkedIn did not let the app download this photo. Right-click the photo, Copy image, then press Ctrl+V on their card in the app.');
       else fail('That is not a LinkedIn profile link.');
     })
     .catch(function (e) { fail(e.message === 'signin' ? 'You are signed out. Sign in to the app, then click the button again.' : 'No connection. Try again.'); });
