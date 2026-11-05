@@ -1,13 +1,10 @@
 {
   "updated": "2026-11-04",
-  "live": "1.4.1",
-  "built": "1.6.0",
-  "next": "1.6.1",
-  "pending_on_pc": [
-    "Run: npx wrangler d1 migrations apply uns-app --remote (migration 0011)",
-    "Deploy 1.6.0"
-  ],
-  "right_now": "1.4.1 is live per this file; 1.5.1 may be live too. 1.6.0 is built: Founder Alignment and Founder Traits inside Intake (wizard, compare, traits). Needs migration 0011 then deploy.",
+  "live": "1.6.0",
+  "built": "1.6.1",
+  "next": "1.6.2",
+  "pending_on_pc": [],
+  "right_now": "1.6.0 is live. 1.6.1 is built: adding a lead jumps to the list it went to (Mehak saw her lead missing because it was saved to Any industry while her screen showed ICP). Needs deploy, no migration.",
   "blocked_on_tabish": [
     "Pick mobile look: playful or premium (needed for the screen pass)",
     "Watchlist for three founders: restate in one sentence",
@@ -195,6 +192,11 @@
     "Service worker sw.js shipped empty in 1.3.10 and 1.4.0 (a bad file write). Restored from 1.3.9. Check file sizes before zipping."
   ],
   "changelog": [
+    {
+      "v": "1.6.1",
+      "date": "2026-11-05",
+      "text": "After Add lead, Leads switches to the list the lead was saved in, shows Everyone and all stages, so a new lead is never hidden by the current filters."
+    },
     {
       "v": "1.6.0",
       "date": "2026-11-04",

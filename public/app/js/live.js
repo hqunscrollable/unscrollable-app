@@ -716,8 +716,8 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && S.ui.lopen) { S.ui.lopen = null; U.render(); } });
   A.laddsave = function () {
     var name = val('a_name'); if (!name) { U.toast('Name the lead.'); return; }
-    var purl = val('a_url');
-    run(api('POST', '/leads', { name: name, company: val('a_co'), owner: val('a_own'), profile_url: val('a_url'), x_url: val('a_x'), why_fit: val('a_why'), stage: val('a_start'), list: val('a_list'), industry: val('a_ind'), source: val('a_start') === 'sent' ? 'Connection request' : '1st degree connection' }), 'Lead added.').then(function (r) { S.ui.ladd = false; U.render(); if (r && r.id && purl) api('POST', '/avatar/lead/' + r.id + '/fetch', {}).then(reload).catch(function () {}); });
+    var purl = val('a_url'), plist = val('a_list');
+    run(api('POST', '/leads', { name: name, company: val('a_co'), owner: val('a_own'), profile_url: val('a_url'), x_url: val('a_x'), why_fit: val('a_why'), stage: val('a_start'), list: val('a_list'), industry: val('a_ind'), source: val('a_start') === 'sent' ? 'Connection request' : '1st degree connection' }), 'Lead added to ' + (plist === 'any' ? 'Any industry' : 'ICP') + '.').then(function (r) { S.ui.ladd = false; if (r && r.id) { S.ui.llist = plist || S.ui.llist; S.ui.lown = 'All'; S.ui.lq = ''; S.ui.pview = 'all'; S.ui.lview = 'board'; } U.render(); if (r && r.id && purl) api('POST', '/avatar/lead/' + r.id + '/fetch', {}).then(reload).catch(function () {}); });
   };
   A.ldone = function (el) {
     var id = el.getAttribute('data-id'), l = L.leads.filter(function (x) { return x.id === id; })[0]; if (!l) return;

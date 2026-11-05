@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.6.1', date: '5 Nov 2026', title: 'A new lead no longer disappears after you add it',
+    what: 'When you add a lead to a different list or owner than the one on screen, the screen now jumps to where the lead went.',
+    does: 'After Add lead, Leads switches to the list you chose (ICP or Any industry), shows Everyone, clears the search and shows All stages. The message says which list it went to.',
+    friction: 'No more "saved but I cannot see it".',
+    where: 'Leads, Add lead.' },
   { v: '1.6.0', date: '4 Nov 2026', title: 'Founder Alignment and Founder Traits are now inside Intake',
     what: 'Both founder forms are real Intake forms now. You answer one question at a time, with a progress bar, and your draft is kept if you leave. Your old answers were imported.',
     does: 'Alignment shows the three of you side by side with tags: shared, aligned, differs, close, apart. Traits gives you a 0 to 100 profile, where you help most, where you need cover, and a team view that shows who covers what. Others stay hidden until all three have answered. You can edit your own answers any time.',
