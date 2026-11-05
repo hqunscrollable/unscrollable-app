@@ -14,6 +14,12 @@ const LOCK_AFTER = 5, LOCK_MINUTES = 15;
 const PUBLIC_PAGES = new Set(['/app/login.html', '/app/login.js', '/app/login.css', '/app/reset.html', '/app/reset.js', '/app/forgot.html', '/app/forgot.js', '/app/eye.js',
   '/app/sw.js', '/app/favicon.svg', '/app/icon-180.png', '/app/icon-192.png', '/app/icon-512.png', '/app/icon-maskable-512.png', '/app/manifest.webmanifest']);
 const OWNERS = ['Tabish', 'Ali', 'Mehak'];
+
+/* Owner key: the app keys leads, tasks and the Watchlist by first name (Tabish, Ali, Mehak). Logins carry full names (Ali Hamza, Mehak Nisar). */
+function ownerOf(user) {
+  const n = String((user && user.name) || '').trim(), l = n.toLowerCase();
+  return OWNERS.find(o => o.toLowerCase() === l) || OWNERS.find(o => l.startsWith(o.toLowerCase() + ' ')) || n;
+}
 const T_STATUS = ['todo', 'doing', 'blocked', 'done'];
 const T_PRIO = ['high', 'normal', 'low'];
 const STAGES = ['sent', 'accepted', 'comment', 'dm', 'guide', 'audit', 'pitched', 'booked', 'away'];   // 'pitched' is kept only so older rows stay valid
@@ -375,12 +381,12 @@ async function allData(env, user) {
     env.DB.prepare('SELECT key, value FROM app_settings').all()
   ]);
   return json({
-    today: todayStr(), tz: TZ, me: user.name, is_dev: !!user.is_dev,
+    today: todayStr(), tz: TZ, me: ownerOf(user), is_dev: !!user.is_dev,
     watch: watch.results, watch_comments: wcom.results,
     settings: Object.fromEntries(set.results.map(r => [r.key, r.value])),
     tasks: tasks.results.map(t => ({ ...t, checks: JSON.parse(t.checks), comments: JSON.parse(t.comments) })),
     leads: leads.results, events: events.results, radar: radar.results,
-    people: users.results.map(u => u.name),
+    people: Array.from(new Set(users.results.map(u => ownerOf(u)))),
     flags: Object.fromEntries(flags.results.map(f => [f.key, !!f.on_back]))
   });
 }
@@ -388,7 +394,7 @@ async function allData(env, user) {
 async function taskCreate(env, user, req) {
   const b = await readJson(req);
   const title = str(b.title, 200); if (!title || !title.trim()) return bad('Title needed.');
-  const owner = OWNERS.concat('Everyone').includes(b.owner) ? b.owner : user.name;
+  const owner = OWNERS.concat('Everyone').includes(b.owner) ? b.owner : ownerOf(user);
   const prio = T_PRIO.includes(b.priority) ? b.priority : 'normal';
   if (!dateOk(b.due)) return bad('Bad date.');
   const tid = id('t_');
@@ -432,7 +438,7 @@ async function taskDelete(env, user, tid) {
 async function leadCreate(env, user, req) {
   const b = await readJson(req);
   const name = str(b.name, 120); if (!name || !name.trim()) return bad('Name needed.');
-  const owner = OWNERS.includes(b.owner) ? b.owner : user.name;
+  const owner = OWNERS.includes(b.owner) ? b.owner : ownerOf(user);
   const url = str(b.profile_url, 300) || null;
   if (url && !/^https:\/\/([a-z]+\.)?linkedin\.com\//i.test(url)) return bad('Use a LinkedIn profile link.');
   const xurl = str(b.x_url, 200) || null;
@@ -644,7 +650,7 @@ async function intakeRespCreate(env, user, fid, req) {
   if (!f) return bad('Form not found.', 404);
   if (f.status !== 'open') return bad('This form is closed.');
   const own = f.audience === 'founder';
-  let who = own ? user.name : str(b.who, 120);
+  let who = own ? ownerOf(user) : str(b.who, 120);
   if (!who || !who.trim()) return bad('Say who this response is from.');
   who = who.trim();
   const fields = JSON.parse(f.fields), a = b.answers && typeof b.answers === 'object' ? b.answers : {}, ans = {};
@@ -821,7 +827,7 @@ async function watchAdd(env, user, req) {
   if (!items.length) return bad('Paste at least one profile link.');
   const kind = W_KIND.includes(b.kind) ? b.kind : 'outlier';
   const split = b.owner === 'split';
-  const fixed = OWNERS.includes(b.owner) ? b.owner : user.name;
+  const fixed = OWNERS.includes(b.owner) ? b.owner : ownerOf(user);
   const have = new Set((await env.DB.prepare('SELECT profile_url FROM watchlist').all()).results.map(r => r.profile_url.toLowerCase()));
   const stmts = []; let skipped = 0, badLinks = 0, i = 0;
   for (const it of items) {
@@ -856,7 +862,7 @@ async function watchComment(env, user, wid, req) {
   const b = await readJson(req);
   const cur = await env.DB.prepare('SELECT id FROM watchlist WHERE id = ?').bind(wid).first();
   if (!cur) return bad('Not found.', 404);
-  const by = OWNERS.includes(b.by) ? b.by : user.name;
+  const by = OWNERS.includes(b.by) ? b.by : ownerOf(user);
   const t = todayStr();
   const dup = await env.DB.prepare('SELECT id FROM watch_comments WHERE watch_id = ? AND day = ?').bind(wid, t).first();
   if (dup) return json({ ok: true, already: true });
@@ -864,7 +870,7 @@ async function watchComment(env, user, wid, req) {
     env.DB.prepare('INSERT INTO watch_comments(watch_id,day,by,logged_by) VALUES (?,?,?,?)').bind(wid, t, by, user.name),
     env.DB.prepare('UPDATE watchlist SET last_commented_at = ?, comment_count = comment_count + 1 WHERE id = ?').bind(t, wid)
   ]);
-  await log(env, user.login_id, 'watch_comment', 'watchlist', wid, by === user.name ? null : `for ${by}`);
+  await log(env, user.login_id, 'watch_comment', 'watchlist', wid, by === ownerOf(user) ? null : `for ${by}`);
   return json({ ok: true });
 }
 async function watchUncomment(env, user, wid) {
@@ -1096,7 +1102,7 @@ async function route(req, env, ctx) {
     }
     if (!user) return bad('Sign in first.', 401);
     let m;
-    if (api === '/me' && method === 'GET') { const ck = user.claude ? null : await renewSession(env, req).catch(() => null); return json({ id: user.id, name: user.name, login_id: user.login_id, role: user.role, is_dev: !!user.is_dev, totp_enabled: !!user.totp_enabled, recovery_left: user.claude ? 0 : await recoveryLeft(env, user.id), ...(user.claude ? { email: null, seen_release: null } : (await env.DB.prepare('SELECT email, seen_release, avatar_v FROM users WHERE id = ?').bind(user.id).first()) || {}) }, 200, ck ? { 'set-cookie': ck } : {}); }
+    if (api === '/me' && method === 'GET') { const ck = user.claude ? null : await renewSession(env, req).catch(() => null); return json({ id: user.id, name: ownerOf(user), full_name: user.name, login_id: user.login_id, role: user.role, is_dev: !!user.is_dev, totp_enabled: !!user.totp_enabled, recovery_left: user.claude ? 0 : await recoveryLeft(env, user.id), ...(user.claude ? { email: null, seen_release: null } : (await env.DB.prepare('SELECT email, seen_release, avatar_v FROM users WHERE id = ?').bind(user.id).first()) || {}) }, 200, ck ? { 'set-cookie': ck } : {}); }
     if (api === '/logout' && method === 'POST') return logout(env, req);
     if (api === '/password' && method === 'POST') return changePassword(env, user, req);
     if (api === '/2fa/setup' && method === 'POST') return twofaSetup(env, user);

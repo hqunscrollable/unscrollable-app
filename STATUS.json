@@ -1,10 +1,10 @@
 {
   "updated": "2026-11-04",
-  "live": "1.6.0",
-  "built": "1.6.1",
-  "next": "1.6.2",
+  "live": "1.6.1",
+  "built": "1.6.2",
+  "next": "1.6.3",
   "pending_on_pc": [],
-  "right_now": "1.6.0 is live. 1.6.1 is built: adding a lead jumps to the list it went to (Mehak saw her lead missing because it was saved to Any industry while her screen showed ICP). Needs deploy, no migration.",
+  "right_now": "1.6.1 is live. 1.6.2 is built: owner names now match for Ali and Mehak (login names are Ali Hamza and Mehak Nisar, the app keys owners by first name). Needs deploy, no migration. Optional SQL fixes Intake rows saved under the full name.",
   "blocked_on_tabish": [
     "Pick mobile look: playful or premium (needed for the screen pass)",
     "Watchlist for three founders: restate in one sentence",
@@ -192,6 +192,11 @@
     "Service worker sw.js shipped empty in 1.3.10 and 1.4.0 (a bad file write). Restored from 1.3.9. Check file sizes before zipping."
   ],
   "changelog": [
+    {
+      "v": "1.6.2",
+      "date": "2026-11-06",
+      "text": "Server maps each login to its owner key (Tabish, Ali, Mehak). Fixes the Me chip, Dashboard, default owner on new leads, tasks and Watchlist people, and Intake responses for Ali and Mehak."
+    },
     {
       "v": "1.6.1",
       "date": "2026-11-05",

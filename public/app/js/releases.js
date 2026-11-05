@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.6.2', date: '6 Nov 2026', title: 'Ali and Mehak now see their own leads, tasks and Watchlist',
+    what: 'The app now treats Ali Hamza as Ali and Mehak Nisar as Mehak everywhere.',
+    does: 'The Me chip, the Dashboard, the owner on new leads, tasks and Watchlist people, and Intake answers all match each founder now. Before, they used the full login name, which matched nothing.',
+    friction: 'No more "saved but I cannot see it" for Ali and Mehak.',
+    where: 'Leads, Tasks, Watchlist, Dashboard and Intake.' },
   { v: '1.6.1', date: '5 Nov 2026', title: 'A new lead no longer disappears after you add it',
     what: 'When you add a lead to a different list or owner than the one on screen, the screen now jumps to where the lead went.',
     does: 'After Add lead, Leads switches to the list you chose (ICP or Any industry), shows Everyone, clears the search and shows All stages. The message says which list it went to.',
