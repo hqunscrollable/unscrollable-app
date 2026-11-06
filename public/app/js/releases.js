@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.6.6', date: '6 Nov 2026', title: 'Our photos next to every owner, and the app fits iPads',
+    what: 'Tabish, Ali and Mehak now show their photo wherever an owner is named: the Leads owner filter, lead and task owner chips, the lists on Today and the Watchlist, and your own photo in the menu.',
+    does: 'On iPad and other tablets, buttons, filters and tick boxes are bigger so they are easy to tap, and the layout has room to breathe in portrait and landscape.',
+    friction: 'You can tell whose lead or task it is at a glance, and nobody has to hunt for small buttons on a tablet.',
+    where: 'Leads, Tasks, Today and the menu.' },
   { v: '1.6.5', date: '6 Nov 2026', title: 'The app tells you when there is a new version and updates itself',
     what: 'When a new version is out, a bar appears at the top: A new version is ready, with an Update now button.',
     does: 'The app checks quietly when you open it, come back to it, and every few minutes. Press Update now and it refreshes itself with the newest files. No Ctrl+F5 and no closing the app. Later hides the bar until the next check.',

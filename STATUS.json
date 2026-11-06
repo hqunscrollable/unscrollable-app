@@ -1,8 +1,8 @@
 {
   "updated": "2026-11-06",
   "live": "1.6.1",
-  "built": "1.6.5",
-  "next": "1.6.6",
+  "built": "1.6.6",
+  "next": "1.6.7",
   "pending_on_pc": [],
   "right_now": "1.6.2 is live. 1.6.3, 1.6.4 and 1.6.5 are built and waiting for Tabish to deploy. Next: Message board, then Save to UNS creating Watchlist or leads.",
   "blocked_on_tabish": [
@@ -192,6 +192,7 @@
     "Service worker sw.js shipped empty in 1.3.10 and 1.4.0 (a bad file write). Restored from 1.3.9. Check file sizes before zipping."
   ],
   "changelog": [
+    "1.6.6 (6 Nov 2026): owner photos for Tabish, Ali and Mehak, iPad and tablet sizing",
     {
       "v": "1.6.5",
       "date": "2026-11-06",

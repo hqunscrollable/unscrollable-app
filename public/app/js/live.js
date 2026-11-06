@@ -132,10 +132,16 @@
   function inits(n) { var p = String(n || '?').trim().split(/\s+/), a = p[0] ? p[0].charAt(0) : '?', b = p.length > 1 ? p[p.length - 1].charAt(0) : ''; return (a + b).toUpperCase(); }
   function touchy() { return !!(window.matchMedia && matchMedia('(pointer: coarse)').matches); }
   function av(kind, o, btn) {
-    var inner = o.avatar_v ? '<img class="avp" src="/app/api/avatar/' + kind + '/' + esc(o.id) + '?v=' + esc(o.avatar_v) + '" alt="" width="38" height="38" loading="lazy">' : '<span class="avp ini" style="--h:' + hue(o.name) + '" aria-hidden="true">' + esc(inits(o.name)) + '</span>';
+    var inner = (kind === 'user' && !o.avatar_v && OPH[o.name]) ? '<img class="avp" src="/app/people/' + String(o.name).toLowerCase() + '.png" alt="" width="38" height="38">' : o.avatar_v ? '<img class="avp" src="/app/api/avatar/' + kind + '/' + esc(o.id) + '?v=' + esc(o.avatar_v) + '" alt="" width="38" height="38" loading="lazy">' : '<span class="avp ini" style="--h:' + hue(o.name) + '" aria-hidden="true">' + esc(inits(o.name)) + '</span>';
     var tip = touchy() ? 'Tap to ' + (o.avatar_v ? 'change' : 'add') + ' the photo.' : 'Change photo. Choose a file, or press Ctrl+V to paste a screenshot.';
     return btn ? '<button type="button" class="avb' + (o.avatar_v ? '' : ' empty') + '" data-act="photo" data-kind="' + kind + '" data-id="' + esc(o.id) + '" title="' + tip + '" aria-label="' + (o.avatar_v ? 'Change' : 'Add') + ' photo for ' + esc(o.name || '') + '">' + inner + '</button>' : inner;
   }
+  /* 1.6.6 owner photos: the three founders have a bundled photo, shown wherever an owner is named */
+  var OPH = { Tabish: 1, Ali: 1, Mehak: 1 };
+  function oav(n, big) { return OPH[n] ? '<img class="oav' + (big ? ' big' : '') + '" src="/app/people/' + String(n).toLowerCase() + '.png" alt="" width="' + (big ? 28 : 20) + '" height="' + (big ? 28 : 20) + '">' : ''; }
+  function oname(n) { return oav(n) + esc(n); }
+  function opill(n) { return '<span class="pill oavp">' + oav(n) + esc(n) + '</span>'; }
+  U.oav = oav;
   U.whoHtml = function () {
     return '<div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">' + av('user', { id: ME.id, name: ME.name, avatar_v: ME.avatar_v }, true)
       + '<div style="min-width:0"><div style="color:#F3F5FA;font-weight:600;overflow-wrap:anywhere">' + esc(ME.name) + '</div><div>Signed in' + (ME.is_dev ? ', admin' : '') + '</div></div></div>';
@@ -153,7 +159,7 @@
     return '<div class="item" style="flex-direction:column;align-items:stretch" data-lead="' + esc(l.id) + '">'
       + '<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="row" style="gap:12px;flex:1 1 220px;min-width:0;align-items:flex-start">' + av('lead', l, true) + '<div class="mn" style="flex:1;min-width:0"><div class="t">' + nm + co(l) + '</div>'
       + '<div class="d">' + (l.stage === 'away' ? 'Away: ' + esc(l.away_reason || '') : l.stage === 'sent' ? esc(sug) : 'Day ' + d + '. ' + esc(sug)) + '</div></div></div>'
-      + '<div class="row" style="gap:6px;flex-wrap:wrap">' + pill(lab(TAGS, l.tag), l.tag === 'hot' ? 'warn' : l.tag === 'warm' ? '' : 'mut') + pill(lab(STAGES, l.stage)) + pill(l.owner) + (l.list === 'any' ? pill('Any industry' + (l.industry ? ': ' + l.industry : ''), 'mut') : '') + (l.stage !== 'away' && l.stage !== 'sent' ? '<span class="pill ' + (w.c || 'mut') + '">' + esc(w.t) + '</span>' : '') + '</div></div>'
+      + '<div class="row" style="gap:6px;flex-wrap:wrap">' + pill(lab(TAGS, l.tag), l.tag === 'hot' ? 'warn' : l.tag === 'warm' ? '' : 'mut') + pill(lab(STAGES, l.stage)) + opill(l.owner) + (l.list === 'any' ? pill('Any industry' + (l.industry ? ': ' + l.industry : ''), 'mut') : '') + (l.stage !== 'away' && l.stage !== 'sent' ? '<span class="pill ' + (w.c || 'mut') + '">' + esc(w.t) + '</span>' : '') + '</div></div>'
       + engageRow(l)
       + '<div class="row" style="gap:8px;margin-top:10px">'
       + (isOpen(l) && (l.stage !== 'sent' || sinceSent(l) >= 6) ? '<button type="button" class="btn pri sm" data-act="ldone" data-id="' + esc(l.id) + '">Did it</button><button type="button" class="btn sm" data-act="lsnooze" data-id="' + esc(l.id) + '">Tomorrow</button>' : '')
@@ -222,7 +228,7 @@
     if (lf === 'watch') return '<div class="phone-leads">' + h + phoneWatchBody() + '</div>';
     h += '<input class="psearch" type="search" data-chg="lq" value="' + esc(S.ui.lq || '') + '" placeholder="Search name or company" aria-label="Search leads" enterkeyhint="search">';
     h += '<div class="psteps" role="group" aria-label="Show">' + [['due', 'Due'], ['all', 'All'], ['away', 'Away']].map(function (v) { return '<button type="button" class="pchip' + (pv === v[0] ? ' on' : '') + '" data-act="pview" data-id="' + v[0] + '" aria-pressed="' + (pv === v[0]) + '">' + fi(VI[v[0]]) + v[1] + '</button>'; }).join('')
-      + '<span class="psep"></span>' + [['All', 'Everyone']].concat([[ME.name, 'Me']]).concat(OWN.filter(function (o) { return o !== ME.name; }).map(function (o) { return [o, o]; })).map(function (v) { return '<button type="button" class="pchip' + (of === v[0] ? ' on' : '') + '" data-act="pown" data-id="' + esc(v[0]) + '" aria-pressed="' + (of === v[0]) + '">' + esc(v[1]) + '</button>'; }).join('') + '</div>';
+      + '<span class="psep"></span>' + [['All', 'Everyone']].concat([[ME.name, 'Me']]).concat(OWN.filter(function (o) { return o !== ME.name; }).map(function (o) { return [o, o]; })).map(function (v) { return '<button type="button" class="pchip' + (of === v[0] ? ' on' : '') + '" data-act="pown" data-id="' + esc(v[0]) + '" aria-pressed="' + (of === v[0]) + '">' + oav(v[0]) + esc(v[1]) + '</button>'; }).join('') + '</div>';
     var ls = L.leads.filter(function (l) {
       if (of !== 'All' && l.owner !== of) return false;
       if (lf !== 'all' && (l.list || 'icp') !== lf) return false;
@@ -256,16 +262,16 @@
     h += '<div class="fgs">' + fg('List', '<div class="seg" role="group" aria-label="Lead list">' + [['icp', 'ICP'], ['any', 'Any industry'], ['all', 'Both'], ['watch', 'Watchlist']].map(function (v) { return '<button type="button" data-act="llistsel" data-id="' + v[0] + '" aria-pressed="' + (lf === v[0]) + '">' + fi(LI[v[0]]) + v[1] + '</button>'; }).join('') + '</div>') + '</div>';
     if (lf === 'any') h += '<div class="banner">Any industry: people who are not our ICP but can afford the service. Same steps as the ICP list, kept apart so it can win the first client.</div>';
     h += '<div class="fgs">' + fg('View', '<div class="seg" role="group">' + [['board', 'Board'], ['all', 'All'], ['away', 'Away']].map(function (v) { return '<button type="button" data-act="lview" data-id="' + v[0] + '" aria-pressed="' + (view === v[0]) + '">' + fi(VI[v[0]]) + v[1] + '</button>'; }).join('') + '</div>')
-      + fg('Owner', '<label class="fsel">' + (U.icon ? U.icon('person') : '') + '<select data-chg="lown" aria-label="Owner">' + opts(['All'].concat(OWN), of) + '</select></label>')
+      + fg('Owner', '<label class="fsel">' + (OPH[of] ? oav(of, true) : (U.icon ? U.icon('person') : '')) + '<select data-chg="lown" aria-label="Owner">' + opts(['All'].concat(OWN), of) + '</select></label>')
       + fg('Search', '<label class="lsearchw">' + (U.icon ? U.icon('search') : '') + '<input class="lsearch" type="search" data-chg="lq" value="' + esc(S.ui.lq || '') + '" placeholder="Name or company" aria-label="Search leads" enterkeyhint="search"></label>') + '</div>';
     if (view === 'board') {
       var sent = ls.filter(function (l) { return l.stage === 'sent'; });
       function bcard(l) {
-        return '<div class="item bc"><div class="bct">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + '</div><div class="d">' + co(l) + ' ' + esc(l.owner) + '. Day ' + funnelDay(l) + '</div></div></div>'
+        return '<div class="item bc"><div class="bct">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + '</div><div class="d">' + co(l) + ' ' + oname(l.owner) + '. Day ' + funnelDay(l) + '</div></div></div>'
           + '<div class="bcb">' + pill(lab(TAGS, l.tag), l.tag === 'hot' ? 'warn' : l.tag === 'warm' ? '' : 'mut') + cpb(l) + xb(l) + '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button></div></div>';
       }
       function srow(l) {
-        return '<div class="item srow">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + co(l) + '</div><div class="d">' + esc(l.owner) + '. Sent ' + sinceSent(l) + ' days ago' + (sinceSent(l) >= 6 ? '. No accept yet. Nudge, or move to Away.' : '.') + '</div></div>'
+        return '<div class="item srow">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + co(l) + '</div><div class="d">' + oname(l.owner) + '. Sent ' + sinceSent(l) + ' days ago' + (sinceSent(l) >= 6 ? '. No accept yet. Nudge, or move to Away.' : '.') + '</div></div>'
           + '<div class="bcb">' + pill(lab(TAGS, l.tag), l.tag === 'hot' ? 'warn' : l.tag === 'warm' ? '' : 'mut') + cpb(l) + xb(l) + '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button></div></div>';
       }
       h += '<div class="card tight"><div class="row" style="justify-content:space-between"><b>Connection sent</b>' + pill(String(sent.length), 'mut') + '</div><div class="list" style="margin-top:8px">' + (sent.length ? sent.map(srow).join('') : '<div class="empty">' + (q ? 'No match.' : 'None') + '</div>') + '</div></div>';
@@ -287,7 +293,7 @@
   /* ---------- TASKS (design ported from the Unscrollable Tasks artifact) ---------- */
   var T_AREAS = ['Setup', 'Brand', 'Sales', 'Content', 'Systems', 'Delivery', 'Other'];
   var T_PRI = [['high', 'High'], ['normal', 'Normal'], ['low', 'Low']];
-  function tchip(t, c) { return '<span class="tk-chip' + (c ? ' ' + c : '') + '">' + esc(t) + '</span>'; }
+  function tchip(t, c) { return '<span class="tk-chip' + (c ? ' ' + c : '') + '">' + (OPH[t] ? oav(t) : '') + esc(t) + '</span>'; }
   function tlate(t) { return t.status !== 'done' && t.due && t.due < L.today; }
   function tsort(a, b) {
     if (a.due !== b.due) { if (!a.due) return 1; if (!b.due) return -1; return a.due < b.due ? -1 : 1; }
@@ -441,8 +447,8 @@
       + OWN.map(function (o) { var n = wdone(o), pc = Math.min(100, Math.round(n / tg * 100)); return '<div class="stack" style="gap:6px"><div class="row" style="justify-content:space-between"><b>' + esc(o) + '</b><span class="sm mut tn">' + n + ' of ' + tg + '</span></div><div class="pbar" role="img" aria-label="' + esc(o) + ' ' + n + ' of ' + tg + '"><i style="width:' + pc + '%"></i></div></div>'; }).join('')
       + '<button type="button" class="btn pri" data-act="tgo" data-id="leads:watch">Open ' + (who === 'All' ? 'my' : 'the') + ' batch, ' + wLeft + ' left</button></section>'
       + '<section class="card stack" style="gap:8px" aria-label="Hot signals"><h2>Hot signals</h2>' + (hot.length ? '<div class="list">' + hot.map(function (l) { return '<button type="button" class="item" data-act="lopen" data-id="' + esc(l.id) + '">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + '</div><div class="d">' + esc(lab(STAGES, l.stage)) + '. Updated ' + esc(ago(l.updated_at)) + '</div></div></button>'; }).join('') + '</div>' : '<div class="empty">No leads marked Hot. Set a lead\'s Signal to Hot when they respond.</div>') + '</section>'
-      + '<section class="card stack" style="gap:8px" aria-label="Calls booked"><div class="row" style="justify-content:space-between"><h2>Calls booked</h2>' + pill(String(booked.length), booked.length ? 'good' : 'mut') + '</div>' + (booked.length ? '<div class="list">' + booked.slice(0, 4).map(function (l) { return '<button type="button" class="item" data-act="lopen" data-id="' + esc(l.id) + '">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + co(l) + '</div><div class="d">' + esc(l.owner) + (l.next_due ? '. ' + esc(fmt(l.next_due)) : '') + '</div></div></button>'; }).join('') + '</div>' : '<div class="empty">No calls booked yet.</div>') + '</section>'
-      + '<section class="card stack" style="gap:8px" aria-label="Blocked"><div class="row" style="justify-content:space-between"><h2>Blocked</h2>' + pill(String(blocked.length), blocked.length ? 'warn' : 'mut') + '</div>' + (blocked.length ? '<div class="list">' + blocked.slice(0, 4).map(function (t) { return '<div class="item"><div class="mn"><div class="t">' + esc(t.title) + '</div><div class="d">' + esc(t.owner) + '</div></div></div>'; }).join('') + '</div>' : '<div class="empty">Nothing is blocked.</div>') + '</section>';
+      + '<section class="card stack" style="gap:8px" aria-label="Calls booked"><div class="row" style="justify-content:space-between"><h2>Calls booked</h2>' + pill(String(booked.length), booked.length ? 'good' : 'mut') + '</div>' + (booked.length ? '<div class="list">' + booked.slice(0, 4).map(function (l) { return '<button type="button" class="item" data-act="lopen" data-id="' + esc(l.id) + '">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + co(l) + '</div><div class="d">' + oname(l.owner) + (l.next_due ? '. ' + esc(fmt(l.next_due)) : '') + '</div></div></button>'; }).join('') + '</div>' : '<div class="empty">No calls booked yet.</div>') + '</section>'
+      + '<section class="card stack" style="gap:8px" aria-label="Blocked"><div class="row" style="justify-content:space-between"><h2>Blocked</h2>' + pill(String(blocked.length), blocked.length ? 'warn' : 'mut') + '</div>' + (blocked.length ? '<div class="list">' + blocked.slice(0, 4).map(function (t) { return '<div class="item"><div class="mn"><div class="t">' + esc(t.title) + '</div><div class="d">' + oname(t.owner) + '</div></div></div>'; }).join('') + '</div>' : '<div class="empty">Nothing is blocked.</div>') + '</section>';
     return '<div class="stack">' + h + '<div class="tday"><div class="stack">' + left + '</div><div class="stack">' + right + '</div></div>' + drawer() + '</div>';
   };
   /* Phone Dashboard (1.4.0): the approved mobile layout, built from the same live data. */
@@ -471,7 +477,7 @@
       return '<button type="button" class="pitem" data-act="lopen" data-id="' + esc(l.id) + '">' + av('lead', l) + '<span class="mn"><b>' + esc(l.name) + '</b><small>' + esc(l.company || lab(STAGES, l.stage)) + '</small></span>' + pill(w.t, w.c) + '</button>';
     }).join('') + '</div>';
     var nt = tk.slice().sort(function (a, b) { return String(a.due || '9999').localeCompare(String(b.due || '9999')); }).slice(0, 3);
-    h += '<div class="pgh"><b>Next tasks</b><i>' + nt.length + '</i></div>' + (nt.length ? '<div class="pcard">' + nt.map(function (t) { var w = when(t.due); return '<button type="button" class="pitem" data-act="tgo" data-id="tasks"><span class="mn"><b>' + esc(t.title) + '</b><small>' + esc(t.owner) + '</small></span>' + pill(w.t, w.c) + '</button>'; }).join('') + '</div>' : '<div class="pcard pempty">No open tasks.</div>');
+    h += '<div class="pgh"><b>Next tasks</b><i>' + nt.length + '</i></div>' + (nt.length ? '<div class="pcard">' + nt.map(function (t) { var w = when(t.due); return '<button type="button" class="pitem" data-act="tgo" data-id="tasks"><span class="mn"><b>' + esc(t.title) + '</b><small>' + oname(t.owner) + '</small></span>' + pill(w.t, w.c) + '</button>'; }).join('') + '</div>' : '<div class="pcard pempty">No open tasks.</div>');
     return '<div class="phone-dash">' + h + '</div>' + drawer();
   };
   U.screens.followups = U.screens.home;
@@ -555,7 +561,7 @@
   function pwrow(w, full) {
     var done = wcommentedToday(w.id);
     var nm = '<a href="' + esc(w.profile_url) + '" target="_blank" rel="noopener noreferrer">' + esc(w.name) + '</a>';
-    return '<div class="pitem pw' + (done ? ' done' : '') + '">' + av('watch', w, true) + '<div class="mn"><b>' + nm + '</b><small>' + esc(lab(W_KIND, w.kind)) + '. Last ' + wago(w) + (full ? '. ' + esc(w.owner) : '') + (w.lead_id ? '. Lead' : '') + '</small>'
+    return '<div class="pitem pw' + (done ? ' done' : '') + '">' + av('watch', w, true) + '<div class="mn"><b>' + nm + '</b><small>' + esc(lab(W_KIND, w.kind)) + '. Last ' + wago(w) + (full ? '. ' + oname(w.owner) : '') + (w.lead_id ? '. Lead' : '') + '</small>'
       + '<span class="pwx">' + cpb(w) + (!w.lead_id ? '<button type="button" class="btn sm" data-act="wlead" data-id="' + esc(w.id) + '">Make lead</button>' : '') + (full ? '<button type="button" class="btn sm' + (w.active ? '' : ' pri') + '" data-act="wactive" data-id="' + esc(w.id) + '" data-on="' + (w.active ? 0 : 1) + '">' + (w.active ? 'Hide' : 'Show') + '</button>' : '') + '</span></div>'
       + (full ? '' : done ? '<button type="button" class="btn sm" data-act="wundo" data-id="' + esc(w.id) + '">Undo</button>' : '<button type="button" class="btn pri sm" data-act="wdone" data-id="' + esc(w.id) + '">Commented</button>') + '</div>';
   }

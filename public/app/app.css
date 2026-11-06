@@ -422,3 +422,31 @@ textarea{width:100%}
 .updbar{position:fixed;z-index:70;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));width:min(560px,calc(100% - 24px));display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);color:var(--fg);border:1px solid var(--brand);border-radius:14px;padding:10px 14px;font-size:14px}
 .updbar[hidden]{display:none}
 .updbar .ub{display:flex;gap:8px}
+
+/* 1.6.6 owner photos */
+.oav{width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;flex:none;background:var(--tint)}
+.oav.big{width:28px;height:28px;margin:0}
+.pill.oavp,.tk-chip .oav{display:inline-flex;align-items:center}
+.pill.oavp .oav{width:18px;height:18px;margin:0 6px 0 -4px}
+.tk-chip .oav{width:16px;height:16px;margin:0 5px 0 -2px}
+.pchip .oav{width:18px;height:18px;margin:0 6px 0 -4px}
+.fsel .oav.big{margin-right:2px}
+
+/* 1.6.6 tablet (iPad): bigger touch targets, two-column room, no sticky side issues */
+@media (pointer:coarse) and (min-width:761px){
+  .btn.sm,.seg button,.grp,.pchip,.sout,.fsel select,.lsearch{min-height:40px}
+  .btn.sm{padding-top:8px;padding-bottom:8px}
+  .tk-ck{min-width:32px;min-height:32px}
+  .main .item .btn,.main .item .pill{min-height:36px}
+}
+@media (min-width:761px) and (max-width:1100px){
+  .main{padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+  .lcol{width:260px}
+  .fgs{gap:12px 16px}
+  .lsearchw{flex:1 1 220px}
+  #sheet{width:min(560px,92%)}
+  .drawer{width:min(520px,92vw)}
+}
+@media (min-width:761px) and (max-width:1100px) and (orientation:portrait){
+  .proto{display:none}
+}
