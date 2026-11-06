@@ -13,7 +13,7 @@
   function applyFlags() { Object.keys(L.flags || {}).forEach(function (k) { if (S.flags[k]) S.flags[k].back = L.flags[k]; }); }
   applyFlags();
   document.getElementById('markslot').innerHTML = U.MARK;
-  document.getElementById('verTxt').textContent = 'v' + (window.UNS_RELEASES && window.UNS_RELEASES[0].v || '') + '. Signed in as ' + ME.name;
+  document.getElementById('verTxt').textContent = 'v' + (window.UNS_RELEASES && window.UNS_RELEASES[0].v || '') + '';
 
   /* ---------- helpers ---------- */
   var STAGES = [['sent', 'Connection sent'], ['accepted', 'Connection accepted'], ['comment', 'First comment'], ['dm', 'DM started'], ['guide', 'Guide sent'], ['audit', 'Audit offered or sent'], ['pitched', 'Call pitched (old)'], ['booked', 'Call booked'], ['away', 'Away']];
@@ -102,6 +102,9 @@
 
   function cpb(l) { return l.profile_url ? '<button type="button" class="btn sm" data-act="lcopy" data-url="' + esc(l.profile_url) + '" aria-label="Copy LinkedIn link for ' + esc(l.name) + '">Copy link</button>' : ''; }
   function mates(l) { var c = String(l.company || '').trim().toLowerCase(); if (!c) return []; return L.leads.filter(function (x) { return x.id !== l.id && String(x.company || '').trim().toLowerCase() === c; }); }
+  var LI = { icp: 'target', any: 'globe', all: 'rings', watch: 'eye' }, VI = { board: 'columns', all: 'rows', away: 'archive', due: 'cal' };
+  function fi(n) { return (U.icon && n) ? U.icon(n).replace('<svg ', '<svg class="fi" ') : ''; }
+  function fg(t, inner) { return '<div class="fg"><div class="ft">' + t + '</div>' + inner + '</div>'; }
   function co(l) {
     if (!l.company) return '';
     var n = mates(l).length + 1;
@@ -215,10 +218,10 @@
     var h = '<div class="plh"><h1>' + (lf === 'watch' ? 'Watchlist' : 'Leads') + '</h1><button type="button" class="btn pri" data-act="laddtoggle">' + (S.ui.ladd ? 'Cancel' : 'Add lead') + '</button></div>';
     if (S.ui.ladd) h += addLeadForm(lf);
     var lists = [['icp', 'ICP'], ['any', 'Any industry'], ['all', 'Both'], ['watch', 'Watchlist']];
-    h += '<div class="psteps" role="group" aria-label="Lead list">' + lists.map(function (v) { return '<button type="button" class="pchip' + (lf === v[0] ? ' on' : '') + '" data-act="llistsel" data-id="' + v[0] + '" aria-pressed="' + (lf === v[0]) + '">' + v[1] + '</button>'; }).join('') + '</div>';
+    h += '<div class="psteps" role="group" aria-label="Lead list">' + lists.map(function (v) { return '<button type="button" class="pchip' + (lf === v[0] ? ' on' : '') + '" data-act="llistsel" data-id="' + v[0] + '" aria-pressed="' + (lf === v[0]) + '">' + fi(LI[v[0]]) + v[1] + '</button>'; }).join('') + '</div>';
     if (lf === 'watch') return '<div class="phone-leads">' + h + phoneWatchBody() + '</div>';
     h += '<input class="psearch" type="search" data-chg="lq" value="' + esc(S.ui.lq || '') + '" placeholder="Search name or company" aria-label="Search leads" enterkeyhint="search">';
-    h += '<div class="psteps" role="group" aria-label="Show">' + [['due', 'Due'], ['all', 'All'], ['away', 'Away']].map(function (v) { return '<button type="button" class="pchip' + (pv === v[0] ? ' on' : '') + '" data-act="pview" data-id="' + v[0] + '" aria-pressed="' + (pv === v[0]) + '">' + v[1] + '</button>'; }).join('')
+    h += '<div class="psteps" role="group" aria-label="Show">' + [['due', 'Due'], ['all', 'All'], ['away', 'Away']].map(function (v) { return '<button type="button" class="pchip' + (pv === v[0] ? ' on' : '') + '" data-act="pview" data-id="' + v[0] + '" aria-pressed="' + (pv === v[0]) + '">' + fi(VI[v[0]]) + v[1] + '</button>'; }).join('')
       + '<span class="psep"></span>' + [['All', 'Everyone']].concat([[ME.name, 'Me']]).concat(OWN.filter(function (o) { return o !== ME.name; }).map(function (o) { return [o, o]; })).map(function (v) { return '<button type="button" class="pchip' + (of === v[0] ? ' on' : '') + '" data-act="pown" data-id="' + esc(v[0]) + '" aria-pressed="' + (of === v[0]) + '">' + esc(v[1]) + '</button>'; }).join('') + '</div>';
     var ls = L.leads.filter(function (l) {
       if (of !== 'All' && l.owner !== of) return false;
@@ -241,23 +244,35 @@
     if (window.matchMedia && matchMedia('(max-width:760px)').matches) return U.phoneLeads();
     var view = S.ui.lview || 'board', of = S.ui.lown || 'All';
     var lf = S.ui.llist || 'icp';
-    var ls = L.leads.filter(function (l) { return (of === 'All' || l.owner === of) && (lf === 'all' || (l.list || 'icp') === lf); });
+    var q = String(S.ui.lq || '').trim().toLowerCase();
+    var ls = L.leads.filter(function (l) { return (of === 'All' || l.owner === of) && (lf === 'all' || (l.list || 'icp') === lf) && (!q || (String(l.name) + ' ' + String(l.company || '')).toLowerCase().indexOf(q) >= 0); });
     if (lf === 'watch') {
-      var wt = '<div class="row"><div class="seg" role="group" aria-label="Lead list">' + [['icp', 'ICP'], ['any', 'Any industry'], ['all', 'Both'], ['watch', 'Watchlist']].map(function (v) { return '<button type="button" data-act="llistsel" data-id="' + v[0] + '" aria-pressed="' + (lf === v[0]) + '">' + v[1] + '</button>'; }).join('') + '</div></div>';
+      var wt = '<div class="fgs">' + fg('List', '<div class="seg" role="group" aria-label="Lead list">' + [['icp', 'ICP'], ['any', 'Any industry'], ['all', 'Both'], ['watch', 'Watchlist']].map(function (v) { return '<button type="button" data-act="llistsel" data-id="' + v[0] + '" aria-pressed="' + (lf === v[0]) + '">' + fi(LI[v[0]]) + v[1] + '</button>'; }).join('') + '</div>') + '</div>';
       return '<div class="stack"><div class="head"><div><h1>Leads</h1><div class="sub">Watchlist: people we comment on every day to stay visible. Not leads until you press Make lead.</div></div></div>' + wt + watchBody() + '</div>';
     }
     var h = head('Leads', 'The warm funnel: connect, comment, DM, guide, pitch the call. One owner per lead.',
       '<button type="button" class="btn pri" data-act="laddtoggle">Add lead</button>');
     if (S.ui.ladd) h += addLeadForm(lf);
-    h += '<div class="row"><div class="seg" role="group" aria-label="Lead list">' + [['icp', 'ICP'], ['any', 'Any industry'], ['all', 'Both'], ['watch', 'Watchlist']].map(function (v) { return '<button type="button" data-act="llistsel" data-id="' + v[0] + '" aria-pressed="' + (lf === v[0]) + '">' + v[1] + '</button>'; }).join('') + '</div></div>';
+    h += '<div class="fgs">' + fg('List', '<div class="seg" role="group" aria-label="Lead list">' + [['icp', 'ICP'], ['any', 'Any industry'], ['all', 'Both'], ['watch', 'Watchlist']].map(function (v) { return '<button type="button" data-act="llistsel" data-id="' + v[0] + '" aria-pressed="' + (lf === v[0]) + '">' + fi(LI[v[0]]) + v[1] + '</button>'; }).join('') + '</div>') + '</div>';
     if (lf === 'any') h += '<div class="banner">Any industry: people who are not our ICP but can afford the service. Same steps as the ICP list, kept apart so it can win the first client.</div>';
-    h += '<div class="row"><div class="seg" role="group">' + [['board', 'Board'], ['all', 'All'], ['away', 'Away']].map(function (v) { return '<button type="button" data-act="lview" data-id="' + v[0] + '" aria-pressed="' + (view === v[0]) + '">' + v[1] + '</button>'; }).join('') + '</div>'
-      + '<label class="sm row" style="gap:6px">Owner<select data-chg="lown">' + opts(['All'].concat(OWN), of) + '</select></label></div>';
+    h += '<div class="fgs">' + fg('View', '<div class="seg" role="group">' + [['board', 'Board'], ['all', 'All'], ['away', 'Away']].map(function (v) { return '<button type="button" data-act="lview" data-id="' + v[0] + '" aria-pressed="' + (view === v[0]) + '">' + fi(VI[v[0]]) + v[1] + '</button>'; }).join('') + '</div>')
+      + fg('Owner', '<label class="fsel">' + (U.icon ? U.icon('person') : '') + '<select data-chg="lown" aria-label="Owner">' + opts(['All'].concat(OWN), of) + '</select></label>')
+      + fg('Search', '<label class="lsearchw">' + (U.icon ? U.icon('search') : '') + '<input class="lsearch" type="search" data-chg="lq" value="' + esc(S.ui.lq || '') + '" placeholder="Name or company" aria-label="Search leads" enterkeyhint="search"></label>') + '</div>';
     if (view === 'board') {
-      h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start">' + STAGES.filter(function (s) { return s[0] !== 'away' && (s[0] !== 'pitched' || ls.some(function (l) { return l.stage === 'pitched'; })); }).map(function (s) {
+      var sent = ls.filter(function (l) { return l.stage === 'sent'; });
+      function bcard(l) {
+        return '<div class="item bc"><div class="bct">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + '</div><div class="d">' + co(l) + ' ' + esc(l.owner) + '. Day ' + funnelDay(l) + '</div></div></div>'
+          + '<div class="bcb">' + pill(lab(TAGS, l.tag), l.tag === 'hot' ? 'warn' : l.tag === 'warm' ? '' : 'mut') + cpb(l) + xb(l) + '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button></div></div>';
+      }
+      function srow(l) {
+        return '<div class="item srow">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + co(l) + '</div><div class="d">' + esc(l.owner) + '. Sent ' + sinceSent(l) + ' days ago' + (sinceSent(l) >= 6 ? '. No accept yet. Nudge, or move to Away.' : '.') + '</div></div>'
+          + '<div class="bcb">' + pill(lab(TAGS, l.tag), l.tag === 'hot' ? 'warn' : l.tag === 'warm' ? '' : 'mut') + cpb(l) + xb(l) + '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button></div></div>';
+      }
+      h += '<div class="card tight"><div class="row" style="justify-content:space-between"><b>Connection sent</b>' + pill(String(sent.length), 'mut') + '</div><div class="list" style="margin-top:8px">' + (sent.length ? sent.map(srow).join('') : '<div class="empty">' + (q ? 'No match.' : 'None') + '</div>') + '</div></div>';
+      h += '<div class="lboard">' + STAGES.filter(function (s) { return s[0] !== 'away' && s[0] !== 'sent' && (s[0] !== 'pitched' || ls.some(function (l) { return l.stage === 'pitched'; })); }).map(function (s) {
         var col = ls.filter(function (l) { return l.stage === s[0]; });
-        return '<div class="card tight"><div class="row" style="justify-content:space-between"><b>' + s[1] + '</b>' + pill(String(col.length), 'mut') + '</div><div class="list" style="margin-top:8px">'
-          + (col.length ? col.map(function (l) { return '<div class="item" style="padding:8px;align-items:center;gap:10px">' + av('lead', l) + '<div class="mn"><div class="t">' + esc(l.name) + '</div><div class="d">' + co(l) + ' ' + esc(l.owner) + (l.stage === 'sent' ? '. Sent ' + sinceSent(l) + 'd ago' : '. Day ' + funnelDay(l)) + '</div></div><div class="sd">' + pill(lab(TAGS, l.tag), l.tag === 'hot' ? 'warn' : l.tag === 'warm' ? '' : 'mut') + cpb(l) + xb(l) + '<button type="button" class="btn sm" data-act="lopen" data-id="' + esc(l.id) + '">Open</button></div></div>'; }).join('') : '<div class="empty">None</div>') + '</div></div>';
+        return '<div class="card tight lcol"><div class="row" style="justify-content:space-between"><b>' + s[1] + '</b>' + pill(String(col.length), 'mut') + '</div><div class="list" style="margin-top:8px">'
+          + (col.length ? col.map(bcard).join('') : '<div class="empty">None</div>') + '</div></div>';
       }).join('') + '</div>';
     } else if (view === 'all') {
       var open = ls.filter(function (l) { return l.stage !== 'away'; });
@@ -812,4 +827,37 @@
     else if (k === 'tkcheck') { var t = task(id), i = +el.getAttribute('data-i'); if (t) { var c = t.checks.map(function (x) { return { t: x.t, d: x.d }; }); c[i].d = v; run(api('PATCH', '/tasks/' + id, { checks: c })); } }
     else if (k === 'rdone') run(api('PATCH', '/radar/' + id, { done: v }));
   });
+  /* 1.6.5 Update button: the app notices a newer version and refreshes itself on one tap. */
+  (function () {
+    var local = String((window.UNS_RELEASES && window.UNS_RELEASES[0] && window.UNS_RELEASES[0].v) || ''), shown = '', last = 0;
+    function num(v) { return String(v).split('.').map(function (n) { return parseInt(n, 10) || 0; }); }
+    function newer(a, b) { var x = num(a), y = num(b); for (var i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; }
+    function bar(v) {
+      var b = document.getElementById('updbar'); if (!b) return;
+      b.innerHTML = '<span><b>A new version is ready (v' + esc(v) + ').</b> Update to get the latest screens.</span><span class="ub"><button type="button" class="btn pri sm" data-act="applyupdate">Update now</button><button type="button" class="btn sm" data-act="laterupdate">Later</button></span>';
+      b.hidden = false;
+    }
+    U.checkUpdate = function (force) {
+      if (!local || !navigator.onLine || (!force && Date.now() - last < 20000)) return Promise.resolve();
+      last = Date.now();
+      return fetch('/app/js/releases.js?c=' + last, { cache: 'no-store', credentials: 'same-origin' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (t) {
+        var m = /\bv:\s*'(\d+\.\d+\.\d+)'/.exec(t || ''); if (!m) return;
+        if (newer(m[1], local) && m[1] !== shown) { shown = m[1]; bar(m[1]); }
+      }).catch(function () {});
+    };
+    U.acts.applyupdate = function (el) {
+      if (el) { el.disabled = true; el.textContent = 'Updating'; }
+      var urls = ['/app/'].concat(Array.prototype.map.call(document.querySelectorAll('script[src],link[rel=stylesheet]'), function (n) { return n.getAttribute('src') || n.getAttribute('href'); }).filter(function (u) { return u && u.indexOf('/app') === 0; }));
+      var go = function () { location.reload(); };
+      Promise.all(urls.map(function (u) { return fetch(u, { cache: 'reload', credentials: 'same-origin' }).catch(function () {}); }))
+        .then(function () { return window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : null; })
+        .then(go, go);
+    };
+    U.acts.laterupdate = function () { var b = document.getElementById('updbar'); if (b) b.hidden = true; };
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') U.checkUpdate(); });
+    window.addEventListener('focus', function () { U.checkUpdate(); });
+    window.addEventListener('online', function () { U.checkUpdate(); });
+    setInterval(function () { U.checkUpdate(); }, 5 * 60 * 1000);
+    setTimeout(function () { U.checkUpdate(); }, 4000);
+  })();
 })();

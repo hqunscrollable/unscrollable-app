@@ -31,6 +31,16 @@ W.U.STAGES=STAGES;W.U.SEGS=SEGS;W.U.OWNERS=OWNERS;W.U.POST_ST=POST_ST;W.U.SECTIO
 function lab(list,v){for(var i=0;i<list.length;i++){if(list[i][0]===v)return list[i][1];}return '';}
 W.U.lab=lab;
 var IC={
+sun:'<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>',
+moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+rings:'<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>',
+eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+columns:'<rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/>',
+rows:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+archive:'<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11h14V8M10 12h4"/>',
+person:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/>',
+search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/>',
 home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
 users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.8 0 4.5 1.8 4.5 4.5"/>',
 file:'<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>',
@@ -148,7 +158,7 @@ var S;
 try{S=JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){S=null;}
 if(!S||!S.leads){S=seed();}
 SECTIONS.forEach(function(x){S.flags=S.flags||{};if(!S.flags[x[0]])S.flags[x[0]]={back:true,client:false};});
-S.who=(window.UNS_ME&&window.UNS_ME.name)||S.who||'Tabish';S.theme=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';try{var _t=localStorage.getItem('uns-theme');if(_t==='dark'||_t==='light')S.theme=_t;}catch(e){}S.door='back';S.route='home';S.ui={leadView:'board',f:{owner:'All',seg:'All',dir:'All',q:'',due:false},taskF:'All',client:null,ctab:'overview',post:null,sheet:null,dev:'registry',draw:false};
+S.who=(window.UNS_ME&&window.UNS_ME.name)||S.who||'Tabish';S.theme='light';try{var _t=localStorage.getItem('uns-theme');if(_t==='dark'||_t==='light')S.theme=_t;}catch(e){}S.door='back';S.route='home';S.ui={leadView:'board',f:{owner:'All',seg:'All',dir:'All',q:'',due:false},taskF:'All',client:null,ctab:'overview',post:null,sheet:null,dev:'registry',draw:false};
 S.cd={tab:'review',post:'p1',mode:'desktop',sel:null,signed:true,step:'email'};
 W.U.S=S;
 W.U.seed=seed;
@@ -203,7 +213,7 @@ function navHtml(){
 }
 function render(){
   document.documentElement.setAttribute('data-door',S.door);document.documentElement.setAttribute('data-theme',S.theme);
-  $('seg-theme').innerHTML='<button type="button" data-act="theme" data-id="light" aria-pressed="'+(S.theme==='light')+'">Light</button><button type="button" data-act="theme" data-id="dark" aria-pressed="'+(S.theme==='dark')+'">Dark</button>';
+  $('seg-theme').innerHTML='<button type="button" data-act="theme" data-id="light" aria-pressed="'+(S.theme==='light')+'">'+icon('sun')+'Light</button><button type="button" data-act="theme" data-id="dark" aria-pressed="'+(S.theme==='dark')+'">'+icon('moon')+'Dark</button>';
   var back=S.door==='back';
   $('seg-door').innerHTML='<button type="button" data-act="door" data-id="back" aria-pressed="'+back+'">Back end</button><button type="button" data-act="door" data-id="client" aria-pressed="'+(!back)+'">Client door</button>';
   $('who').value=S.who;$('who').disabled=!back;

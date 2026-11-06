@@ -1,6 +1,21 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.6.5', date: '6 Nov 2026', title: 'The app tells you when there is a new version and updates itself',
+    what: 'When a new version is out, a bar appears at the top: A new version is ready, with an Update now button.',
+    does: 'The app checks quietly when you open it, come back to it, and every few minutes. Press Update now and it refreshes itself with the newest files. No Ctrl+F5 and no closing the app. Later hides the bar until the next check.',
+    friction: 'Nobody has to know about hard refreshes any more, on the PC or on the phone.',
+    where: 'A bar at the top of any screen.' },
+  { v: '1.6.4', date: '6 Nov 2026', title: 'Clearer Leads filters, a tidy top strip, light by default',
+    what: 'Leads filters have labels (List, View, Owner, Search) and an icon on every option. The top strip now only shows the name and version. Light and Dark, View as (Back end or Client door), your name and Sign out sit at the bottom of the menu.',
+    does: 'The app always opens light, whatever the phone or PC is set to. Dark only turns on when you press Dark, and it is remembered on that device. Reset demo screens moved to Settings. In the Client door view, a Back to Back end button appears in the top strip.',
+    friction: 'Nobody has to guess which row of pills does what, and nothing important hides in a crowded strip.',
+    where: 'Leads, the menu on the left, Settings.' },
+  { v: '1.6.3', date: '6 Nov 2026', title: 'Leads board is readable on smaller screens, and you can search it',
+    what: 'Connection sent now sits in a full-width list above the board. The other stages stay as columns that scroll sideways. Leads has a search box for name or company.',
+    does: 'Names and company chips no longer squeeze into narrow columns. Each lead in Connection sent shows who owns it and how long ago the request went. Type a name or company in the search box and press Enter to filter the board.',
+    friction: 'Ali can read the board on his laptop, and nobody has to scroll 50 cards to find one person.',
+    where: 'Leads, Board view.' },
   { v: '1.6.2', date: '6 Nov 2026', title: 'Ali and Mehak now see their own leads, tasks and Watchlist',
     what: 'The app now treats Ali Hamza as Ali and Mehak Nisar as Mehak everywhere.',
     does: 'The Me chip, the Dashboard, the owner on new leads, tasks and Watchlist people, and Intake answers all match each founder now. Before, they used the full login name, which matched nothing.',

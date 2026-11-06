@@ -1,10 +1,10 @@
 {
-  "updated": "2026-11-04",
+  "updated": "2026-11-06",
   "live": "1.6.1",
-  "built": "1.6.2",
-  "next": "1.6.3",
+  "built": "1.6.5",
+  "next": "1.6.6",
   "pending_on_pc": [],
-  "right_now": "1.6.1 is live. 1.6.2 is built: owner names now match for Ali and Mehak (login names are Ali Hamza and Mehak Nisar, the app keys owners by first name). Needs deploy, no migration. Optional SQL fixes Intake rows saved under the full name.",
+  "right_now": "1.6.2 is live. 1.6.3, 1.6.4 and 1.6.5 are built and waiting for Tabish to deploy. Next: Message board, then Save to UNS creating Watchlist or leads.",
   "blocked_on_tabish": [
     "Pick mobile look: playful or premium (needed for the screen pass)",
     "Watchlist for three founders: restate in one sentence",
@@ -192,6 +192,21 @@
     "Service worker sw.js shipped empty in 1.3.10 and 1.4.0 (a bad file write). Restored from 1.3.9. Check file sizes before zipping."
   ],
   "changelog": [
+    {
+      "v": "1.6.5",
+      "date": "2026-11-06",
+      "text": "Update bar: the app checks for a newer version (on open, on return, every 5 minutes) and shows Update now, which refreshes the files and reloads."
+    },
+    {
+      "v": "1.6.4",
+      "date": "2026-11-06",
+      "text": "Leads filters labelled with icons, top strip reduced to name and version, light by default (ignores device dark mode), Light/Dark, View as and Sign out in the sidebar foot, Reset demo screens in Settings."
+    },
+    {
+      "v": "1.6.3",
+      "date": "2026-11-06",
+      "text": "Leads board: Connection sent is a full-width list, other stages scroll sideways with readable cards, search by name or company on desktop."
+    },
     {
       "v": "1.6.2",
       "date": "2026-11-06",
