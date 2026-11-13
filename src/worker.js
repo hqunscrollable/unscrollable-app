@@ -29,6 +29,9 @@ const CLAUDE_MAX_MIN = 240;
 const TAGS = ['hot', 'warm', 'quiet'];
 const AWAY = ['no reply', 'not ICP', 'no budget', 'timing', 'other'];
 const R_STATE = ['now', 'waiting', 'parked', 'stale'];
+const C_STAGES = ['onboarding', 'pilot', 'active', 'review', 'ended'];
+const C_TERMS = ['open', 'sent', 'agreed'];
+const C_LABEL = { onboarding: 'Onboarding', pilot: 'Pilot', active: 'Active', review: 'Review', ended: 'Ended' };
 
 const SEC = {
   'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
@@ -398,8 +401,10 @@ async function taskCreate(env, user, req) {
   const prio = T_PRIO.includes(b.priority) ? b.priority : 'normal';
   if (!dateOk(b.due)) return bad('Bad date.');
   const tid = id('t_');
-  await env.DB.prepare('INSERT INTO tasks(id,title,owner,priority,area,due,notes) VALUES (?,?,?,?,?,?,?)')
-    .bind(tid, title.trim(), owner, prio, str(b.area, 40), b.due || null, str(b.notes, 2000)).run();
+  let cid = null;
+  if (b.client_id) { const c = await env.DB.prepare('SELECT id FROM clients WHERE id = ?').bind(String(b.client_id)).first(); if (!c) return bad('Unknown client.'); cid = c.id; }
+  await env.DB.prepare('INSERT INTO tasks(id,title,owner,priority,area,due,notes,client_id) VALUES (?,?,?,?,?,?,?,?)')
+    .bind(tid, title.trim(), owner, prio, str(b.area, 40), b.due || null, str(b.notes, 2000), cid).run();
   await log(env, user.login_id, 'task_created', 'task', tid, title);
   return json({ id: tid });
 }
@@ -563,6 +568,91 @@ async function devInfo(env, user) {
 }
 // ---------- Build dashboard (Tabish only): STATUS.json from the repo plus internal notes ----------
 const NOTE_TAGS = ['Idea', 'Decision', 'Remember', 'Bug', 'Question'];
+
+// ---------- clients (1.7.0) ----------
+async function clientEvent(env, cid, kind, detail, by) {
+  await env.DB.prepare('INSERT INTO client_events(client_id,at,kind,detail,by) VALUES (?,?,?,?,?)').bind(cid, nowIso(), kind, str(detail, 300), by).run();
+}
+async function clientNotify(env, text) { try { await notify(env, 'clients', text); } catch { /* alerts never block saving */ } }
+async function clientsAll(env) {
+  const [c, e, t] = await Promise.all([
+    env.DB.prepare('SELECT * FROM clients ORDER BY (stage = \'ended\'), updated_at DESC').all(),
+    env.DB.prepare('SELECT client_id, at, kind, detail, by FROM client_events ORDER BY id DESC LIMIT 300').all(),
+    env.DB.prepare('SELECT id, title, owner, status, due, client_id FROM tasks WHERE client_id IS NOT NULL ORDER BY done_at IS NOT NULL, due IS NULL, due').all()
+  ]);
+  return json({ clients: c.results, events: e.results.map(x => x.kind === 'touch' ? { ...x, day: todayStr(new Date(x.at)) } : x), tasks: t.results });
+}
+async function clientCreate(env, user, req) {
+  const b = await readJson(req);
+  let name = str(b.name, 120), company = str(b.company, 120), owner = OWNERS.includes(b.owner) ? b.owner : ownerOf(user), lead = null;
+  if (b.lead_id) {
+    lead = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(String(b.lead_id)).first();
+    if (!lead) return bad('That lead was not found.', 404);
+    if (await env.DB.prepare('SELECT id FROM clients WHERE lead_id = ?').bind(lead.id).first()) return bad('This lead is already a client.', 409);
+    name = lead.name; company = lead.company; owner = OWNERS.includes(lead.owner) ? lead.owner : owner;
+  }
+  if (!name || !name.trim()) return bad('Name needed.');
+  const cid = id('c_'), t = nowIso();
+  await env.DB.prepare('INSERT INTO clients(id,lead_id,name,company,owner,stage,package,terms_status,next_step,next_checkin,notes,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(cid, lead ? lead.id : null, name.trim(), company, owner, 'onboarding', str(b.package, 120), 'open', str(b.next_step, 200), dateOk(b.next_checkin) ? (b.next_checkin || null) : null, str(b.notes, 2000), user.name, t, t).run();
+  await clientEvent(env, cid, 'created', lead ? 'Made a client from a lead' : 'Added as a client', user.name);
+  if (lead) await env.DB.prepare('INSERT INTO lead_events(lead_id,kind,detail,by) VALUES (?,?,?,?)').bind(lead.id, 'note', 'Became a client', user.name).run();
+  await log(env, user.login_id, 'client_created', 'client', cid, name);
+  await clientNotify(env, '**New client:** ' + name.trim() + ' (owner ' + owner + ')');
+  return json({ id: cid });
+}
+async function clientUpdate(env, user, cid, req) {
+  const b = await readJson(req);
+  const cur = await env.DB.prepare('SELECT * FROM clients WHERE id = ?').bind(cid).first();
+  if (!cur) return bad('Not found.', 404);
+  const set = [], vals = [], ev = [];
+  const add = (k, v) => { set.push(k + ' = ?'); vals.push(v); };
+  if ('stage' in b && b.stage !== cur.stage) {
+    if (!C_STAGES.includes(b.stage)) return bad('Bad stage.');
+    add('stage', b.stage); ev.push(['stage', C_LABEL[cur.stage] + ' to ' + C_LABEL[b.stage]]);
+  }
+  if ('ball' in b && b.ball !== cur.ball) { if (b.ball !== 'us' && b.ball !== 'them') return bad('Bad value.'); add('ball', b.ball); }
+  if ('checklist' in b) {
+    const l = Array.isArray(b.checklist) ? b.checklist.map(x => (x ? 1 : 0)) : null;
+    if (!l || l.length !== 5) return bad('Bad checklist.');
+    if (JSON.stringify(l) !== cur.checklist) add('checklist', JSON.stringify(l));
+  }
+  if (b.stage === 'pilot' && cur.stage !== 'pilot' && !cur.pilot_start && !('pilot_start' in b)) add('pilot_start', todayStr());
+  if ('terms_status' in b && b.terms_status !== cur.terms_status) {
+    if (!C_TERMS.includes(b.terms_status)) return bad('Bad terms status.');
+    add('terms_status', b.terms_status); ev.push(['terms', 'Terms ' + cur.terms_status + ' to ' + b.terms_status]);
+  }
+  if ('owner' in b && b.owner !== cur.owner) {
+    if (!OWNERS.includes(b.owner)) return bad('Bad owner.');
+    add('owner', b.owner); ev.push(['owner', cur.owner + ' to ' + b.owner]);
+  }
+  for (const [k, n] of [['name', 120], ['company', 120], ['package', 120], ['terms', 2000], ['next_step', 200], ['notes', 2000]])
+    if (k in b && !set.some(x => x.startsWith(k + ' '))) {
+      const v = str(b[k], n);
+      if (k === 'name' && !(v && v.trim())) return bad('Name needed.');
+      if (v !== cur[k] && !(v === '' && cur[k] == null)) add(k, k === 'name' ? v.trim() : v);
+    }
+  for (const k of ['pilot_start', 'pilot_end', 'next_checkin'])
+    if (k in b) { if (!dateOk(b[k])) return bad('Bad date.'); const v = b[k] || null; if (v !== cur[k]) add(k, v); }
+  if (!set.length) return bad('Nothing to change.');
+  add('updated_at', nowIso());
+  await env.DB.prepare(`UPDATE clients SET ${set.join(', ')} WHERE id = ?`).bind(...vals, cid).run();
+  for (const [k, d] of ev) await clientEvent(env, cid, k, d, user.name);
+  await log(env, user.login_id, 'client_updated', 'client', cid, Object.keys(b).join(','));
+  const nm = (set.some(x => x.startsWith('name ')) ? String(b.name).trim() : cur.name);
+  for (const [k, d] of ev) if (k === 'stage' || k === 'terms' || k === 'owner') await clientNotify(env, '**' + nm + ':** ' + d + ' (by ' + user.name + ')');
+  return json({ ok: true });
+}
+
+async function clientTouch(env, user, cid, req) {
+  const b = await readJson(req);
+  const c = await env.DB.prepare('SELECT id FROM clients WHERE id = ?').bind(cid).first();
+  if (!c) return bad('Not found.', 404);
+  await env.DB.prepare("UPDATE clients SET ball = 'them', updated_at = ? WHERE id = ?").bind(nowIso(), cid).run();
+  await clientEvent(env, cid, 'touch', str(b.note, 300) || 'Touched base', user.name);
+  return json({ ok: true });
+}
+
 // ---------- intake (founder side) ----------
 const IN_AUD = ['founder', 'contractor', 'client'], IN_TYPES = ['short', 'long', 'pick', 'multi', 'slider'];
 const cleanStr = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
@@ -1068,6 +1158,55 @@ async function avatarFetch(env, user, kind, rid) {
   return json({ ok: true });
 }
 
+
+// ---------- discord status command (1.7.1) ----------
+// The one place the app reads from Discord: a slash command. Discord signs every request; we check it.
+// Only founders listed in DISCORD_FOUNDER_IDS get an answer, and the answer is shown only to them.
+const hexBytes = (h) => { const a = new Uint8Array(h.length / 2); for (let i = 0; i < a.length; i++) a[i] = parseInt(h.substr(i * 2, 2), 16); return a; };
+async function discordVerified(env, req, raw) {
+  const sig = req.headers.get('x-signature-ed25519'), ts = req.headers.get('x-signature-timestamp');
+  if (!sig || !ts || !env.DISCORD_PUBLIC_KEY || !/^[0-9a-f]+$/i.test(sig) || !/^[0-9a-f]{64}$/i.test(env.DISCORD_PUBLIC_KEY)) return false;
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false;
+  try {
+    const key = await crypto.subtle.importKey('raw', hexBytes(env.DISCORD_PUBLIC_KEY), { name: 'Ed25519' }, false, ['verify']);
+    return await crypto.subtle.verify('Ed25519', key, hexBytes(sig), new TextEncoder().encode(ts + raw));
+  } catch { return false; }
+}
+async function statusText(env, only) {
+  const [c, t, tc] = await Promise.all([
+    env.DB.prepare("SELECT * FROM clients WHERE stage != 'ended' ORDER BY updated_at DESC").all(),
+    env.DB.prepare("SELECT client_id, COUNT(*) AS n FROM tasks WHERE client_id IS NOT NULL AND status != 'done' GROUP BY client_id").all(),
+    env.DB.prepare("SELECT client_id, MAX(at) AS at FROM client_events WHERE kind = 'touch' GROUP BY client_id").all()
+  ]);
+  let rows = c.results;
+  if (only) rows = rows.filter(x => x.name.toLowerCase().includes(only.toLowerCase()));
+  if (!rows.length) return only ? 'No client matches "' + only.slice(0, 40) + '".' : 'No clients yet.';
+  const today = todayStr();
+  return rows.slice(0, 12).map(x => {
+    const open = (t.results.find(y => y.client_id === x.id) || {}).n || 0;
+    const last = (tc.results.find(y => y.client_id === x.id) || {}).at;
+    const q = last ? Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(todayStr(new Date(last)) + 'T12:00:00Z')) / 864e5) : null;
+    const who = x.ball === 'us' ? 'Your move, ' + x.owner : 'Waiting on them';
+    const late = x.next_checkin && x.next_checkin < today ? ' (late)' : '';
+    return '**' + x.name + '** · ' + C_LABEL[x.stage] + '\n'
+      + who + ' · ' + (q == null ? 'no contact logged' : q === 0 ? 'spoke today' : q === 1 ? 'spoke yesterday' : 'quiet ' + q + ' days') + ' · ' + open + ' open task' + (open === 1 ? '' : 's') + '\n'
+      + 'Next: ' + (x.next_step || 'nothing set') + (x.next_checkin ? ' on ' + x.next_checkin + late : '');
+  }).join('\n\n');
+}
+async function discordInteraction(env, req) {
+  const raw = await req.text();
+  if (!(await discordVerified(env, req, raw))) return new Response('Bad signature', { status: 401 });
+  let b; try { b = JSON.parse(raw); } catch { return new Response('Bad request', { status: 400 }); }
+  const reply = (content) => new Response(JSON.stringify({ type: 4, data: { content: String(content).slice(0, 1900), flags: 64, allowed_mentions: { parse: [] } } }), { headers: { 'content-type': 'application/json' } });
+  if (b.type === 1) return new Response(JSON.stringify({ type: 1 }), { headers: { 'content-type': 'application/json' } });
+  if (b.type !== 2 || !b.data || b.data.name !== 'status') return reply('Unknown command.');
+  const who = String((b.member && b.member.user && b.member.user.id) || (b.user && b.user.id) || '');
+  const ok = String(env.DISCORD_FOUNDER_IDS || '').split(',').map(x => x.trim()).filter(Boolean);
+  if (!who || !ok.includes(who)) return reply('Only the founders can use this.');
+  const opt = (b.data.options || []).find(o => o.name === 'client');
+  return reply(await statusText(env, opt ? String(opt.value).slice(0, 60) : ''));
+}
+
 // ---------- router ----------
 async function route(req, env, ctx) {
   const url = new URL(req.url);
@@ -1075,6 +1214,8 @@ async function route(req, env, ctx) {
   const method = req.method;
 
   if (p !== '/app' && !p.startsWith('/app/')) return withSec(new Response('Not found', { status: 404 }));
+
+  if (p === '/app/discord' && method === 'POST') return withSec(await discordInteraction(env, req));
 
   if (p.startsWith('/app/api/')) {
     const api = p.slice('/app/api'.length);
@@ -1121,6 +1262,10 @@ async function route(req, env, ctx) {
       if (method === 'DELETE') return avatarDelete(env, user, m[1], m[2]);
     }
     if ((m = api.match(/^\/avatar\/(lead|watch)\/([\w]+)\/fetch$/)) && method === 'POST') return avatarFetch(env, user, m[1], m[2]);
+    if (api === '/clients' && method === 'GET') return clientsAll(env);
+    if (api === '/clients' && method === 'POST') return clientCreate(env, user, req);
+    if ((m = api.match(/^\/clients\/([\w]+)$/)) && method === 'PATCH') return clientUpdate(env, user, m[1], req);
+    if ((m = api.match(/^\/clients\/([\w]+)\/touch$/)) && method === 'POST') return clientTouch(env, user, m[1], req);
     if (api === '/intake' && method === 'GET') return intakeAll(env);
     if (api === '/intake/forms' && method === 'POST') return intakeFormCreate(env, user, req);
     if ((m = api.match(/^\/intake\/forms\/([\w]+)$/))) {
@@ -1182,7 +1327,10 @@ async function route(req, env, ctx) {
   const file = (path === '/app' || path === '/app/') ? '/app/index.html' : path;
   const assetReq = new Request(new URL(file, url.origin), req);
   const res = await env.ASSETS.fetch(assetReq);
-  return withSec(res);
+  const out = withSec(res);
+  // Scripts and styles are app code, not data: the browser may keep them, but must check they are current (cheap 304).
+  if (/^\/app\/(js\/[\w.]+\.js|app\.css|early\.js|eye\.js)$/.test(file) && (res.status === 200 || res.status === 304)) out.headers.set('cache-control', 'private, no-cache');
+  return out;
 }
 
 // ---------- cron ----------

@@ -9,13 +9,26 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app/app.css">
+<script src="/app/early.js"></script>
+<link rel="preload" as="script" href="/app/js/core.js">
+<link rel="preload" as="script" href="/app/js/screens_a.js">
+<link rel="preload" as="script" href="/app/js/screens_b.js">
+<link rel="preload" as="script" href="/app/js/screens_c.js">
+<link rel="preload" as="script" href="/app/js/screens_d.js">
+<link rel="preload" as="script" href="/app/js/releases.js">
+<link rel="preload" as="script" href="/app/js/live.js">
+<link rel="preload" as="script" href="/app/js/build.js">
+<link rel="preload" as="script" href="/app/js/intake.js">
+<link rel="preload" as="script" href="/app/js/clients.js">
+<link rel="preload" as="script" href="/app/js/mobile.js">
+<link rel="preload" as="script" href="/app/js/phone.js">
 </head>
 <body>
 <div class="proto"><div class="grp"><b>Unscrollable</b><span class="sm" id="verTxt"></span></div><div class="grp"><select id="who" hidden aria-hidden="true"><option>Tabish</option><option>Ali</option><option>Mehak</option></select><button type="button" class="lnk exitclient" data-act="door" data-id="back">Back to Back end</button></div></div>
 <div class="app">
 <div class="topbar"><button type="button" class="btn sm" data-act="menu" aria-label="Menu">Menu</button><b id="topttl"></b></div>
-<aside class="side" id="side"><div class="brand"><span id="markslot"></span><b class="nm">UNS</b><span class="pill solid">Back end</span></div><nav class="nav" id="nav" aria-label="Sections"></nav><div class="sfoot"><div><div class="fl">Appearance</div><div class="seg" id="seg-theme" role="group" aria-label="Theme"></div></div><div><div class="fl">View as</div><div class="seg" id="seg-door" role="group" aria-label="View"></div></div><div class="sm mut" id="whoTxt"></div><button type="button" class="sout" data-act="signout">Sign out</button></div></aside>
-<main class="main" id="main"><div class="empty" style="margin:40px">Loading</div></main>
+<aside class="side" id="side"><div class="brand"><span id="markslot"></span><b class="nm">UNS</b><span class="pill solid">Back end</span></div><nav class="nav" id="nav" aria-label="Sections"><div class="sk dk" style="height:34px;margin:8px 0"></div><div class="sk dk" style="height:34px;margin:8px 0"></div><div class="sk dk" style="height:34px;margin:8px 0"></div><div class="sk dk" style="height:34px;margin:8px 0"></div><div class="sk dk" style="height:34px;margin:8px 0"></div><div class="sk dk" style="height:34px;margin:8px 0"></div></nav><div class="sfoot"><div><div class="fl">Appearance</div><div class="seg" id="seg-theme" role="group" aria-label="Theme"></div></div><div><div class="fl">View as</div><div class="seg" id="seg-door" role="group" aria-label="View"></div></div><div class="sm mut" id="whoTxt"></div><button type="button" class="sout" data-act="signout">Sign out</button></div></aside>
+<main class="main" id="main"><div class="skwrap" role="status" aria-busy="true" aria-label="Loading"><div class="sk" style="height:34px;width:38%"></div><div class="sk" style="height:16px;width:58%;margin:12px 0 24px"></div><div class="skgrid"><div class="sk" style="height:110px"></div><div class="sk" style="height:110px"></div><div class="sk" style="height:110px"></div></div><div class="sk" style="height:220px;margin-top:16px"></div></div></main>
 </div>
 <div id="scrim" hidden></div><aside id="sheet" hidden aria-label="Details"></aside><div id="updbar" class="updbar" role="status" hidden></div><div id="toasts" aria-live="polite"></div>
 <script src="/app/eye.js"></script>

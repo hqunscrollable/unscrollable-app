@@ -1,6 +1,21 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.7.2', date: '14 Nov 2026', title: 'Faster load, skeleton, and a simpler Clients page',
+    what: 'The app now starts fetching your data the moment the page opens, shows a skeleton instead of a blank screen, and keeps its scripts fresh without re-downloading them. Clients is redesigned around one sentence: whose move it is and how long it has been quiet.',
+    does: 'Each client card has Log a touch and Details. Details holds the ball switch (us or them), the journey rail with a Move to next step button, a 7-day contact strip, a five-item checklist, plan and terms, tasks and history. The top of the page lists who needs us today.',
+    friction: 'Cold load is about twice as fast on a slow connection, and logging a client touch is one tap.',
+    where: 'Clients, and every screen on first load.' },
+  { v: '1.7.1', date: '14 Nov 2026', title: 'Ask Discord for client status',
+    what: 'Type /status in Discord and the app answers with every open client: stage, owner, open tasks and the next step. Add a name after it to see just one client.',
+    does: 'Only the three founders get an answer, and only they see it. Client updates (new client, stage, terms, owner) post to a Discord channel of your choice.',
+    friction: 'Ali and Mehak can check where a client stands from the chat they already have open, without signing in.',
+    where: 'Discord, the /status command.' },
+  { v: '1.7.0', date: '14 Nov 2026', title: 'Clients: one record per client for delivery',
+    what: 'The Clients screen is now real. Each client has a stage, owner, package, pilot dates, short terms, a next step and a check-in date. You can make a client from a lead in one tap.',
+    does: 'Add tasks that belong to the client. Every change is kept in a short history, and stage, terms and owner changes post to Discord. Money is not here on purpose. Prices and payments go in a Billing section later.',
+    friction: 'One place answers: who is this client, where are they in delivery, and what happens next. No more digging through chats and the board.',
+    where: 'Clients, in the menu.' },
   { v: '1.6.6', date: '6 Nov 2026', title: 'Our photos next to every owner, and the app fits iPads',
     what: 'Tabish, Ali and Mehak now show their photo wherever an owner is named: the Leads owner filter, lead and task owner chips, the lists on Today and the Watchlist, and your own photo in the menu.',
     does: 'On iPad and other tablets, buttons, filters and tick boxes are bigger so they are easy to tap, and the layout has room to breathe in portrait and landscape.',

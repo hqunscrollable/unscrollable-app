@@ -31,3 +31,6 @@ crons = ["0 4 * * 1", "30 3 * * *"]
 #   TOTP_KEY          32 random bytes, base64. Encrypts two-factor secrets.
 #   DISCORD_ERRORS    webhook URL for the errors channel
 #   DISCORD_ALERTS    webhook URL for the alerts channel
+#   DISCORD_CLIENTS   webhook URL for client updates (optional, falls back to alerts)
+#   DISCORD_PUBLIC_KEY      public key of the Discord application (for the /status command)
+#   DISCORD_FOUNDER_IDS     Discord user ids of the founders, comma separated

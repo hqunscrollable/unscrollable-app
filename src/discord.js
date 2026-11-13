@@ -1,6 +1,6 @@
 // Discord alerts. The app writes to Discord. Discord never writes to the app.
 export async function notify(env, channel, text) {
-  const url = channel === 'errors' ? env.DISCORD_ERRORS : env.DISCORD_ALERTS;
+  const url = channel === 'errors' ? env.DISCORD_ERRORS : channel === 'clients' ? (env.DISCORD_CLIENTS || env.DISCORD_ALERTS) : env.DISCORD_ALERTS;
   if (!url) return false;
   try {
     const r = await fetch(url, {
