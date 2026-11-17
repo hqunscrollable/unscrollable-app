@@ -28,7 +28,7 @@
   function ago(iso) { var d = Math.round((Date.now() - Date.parse(iso)) / 864e5); return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'; }
 
   U.screens.build = function () {
-    var h = '<div class="head"><div><h1>Build</h1><div class="sub">The whole app at a glance, and your own notes. Only you can see this.</div></div><div class="row"><button type="button" class="btn sm" data-act="bload">Refresh</button></div></div>';
+    var h = '<div class="head"><div><h1>Build</h1><div class="sub">The whole app at a glance, and your own notes. Only you can see this.</div></div><div class="row"><a class="btn sm" href="https://claude.ai/artifact/C1iRwe5QZ3xk3HeCpNKWPe" target="_blank" rel="noopener noreferrer">Command center</a><button type="button" class="btn sm" data-act="bload">Refresh</button></div></div>';
     if (ERR) return '<div class="stack">' + h + '<div class="banner warn">Could not load. ' + esc(ERR) + '</div></div>';
     if (!B) { load(); return '<div class="stack">' + h + '<div class="empty">Loading</div></div>'; }
     var s = B.status, f = s.features || [], dep = f.filter(function (x) { return x.state === 'Deployed'; }).length;

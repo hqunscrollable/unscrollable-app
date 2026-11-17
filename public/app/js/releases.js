@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.7.3', date: '18 Nov 2026', title: 'A Command center button on Build',
+    what: 'The Build screen now has a Command center button. It opens one page that shows all three products, the open tasks and where each project stands.',
+    does: 'The page reads the task list and the project files from Drive each time it opens, so it is always current. It opens in a new tab. Only Tabish sees the Build screen.',
+    friction: 'You do not have to remember where the command center lives or hunt for the link.',
+    where: 'Build, top right.' },
   { v: '1.7.2', date: '14 Nov 2026', title: 'Faster load, skeleton, and a simpler Clients page',
     what: 'The app now starts fetching your data the moment the page opens, shows a skeleton instead of a blank screen, and keeps its scripts fresh without re-downloading them. Clients is redesigned around one sentence: whose move it is and how long it has been quiet.',
     does: 'Each client card has Log a touch and Details. Details holds the ball switch (us or them), the journey rail with a Move to next step button, a 7-day contact strip, a five-item checklist, plan and terms, tasks and history. The top of the page lists who needs us today.',
