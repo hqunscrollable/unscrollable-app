@@ -1,10 +1,10 @@
 /* Build dashboard (Tabish only). Reads STATUS.json through the API and keeps internal notes in the database. */
 (function () {
   var U = window.U, S = U.S, esc = U.esc, pill = U.pill, ME = window.UNS_ME;
-  U.SECTIONS.push(['build', 'Build', 'code', 'System']);
+  U.SECTIONS.push(['build', 'Command center', 'layers', 'System']);
   S.flags.build = { back: true, client: false };
   var B = null, ERR = null, SHIP = {}, TAGS = ['Idea', 'Decision', 'Remember', 'Bug', 'Question'];
-  var st = S.ui.b = { fs: 'All', nt: 'All', q: '', edit: null };
+  var st = S.ui.b = { fs: 'All', nt: 'All', q: '', edit: null, view: 'hq', ha: 'All' };
   try { SHIP = JSON.parse(localStorage.getItem('uns-ship') || '{}') || {}; } catch (e) { SHIP = {}; }
 
   var css = document.createElement('style');
@@ -28,12 +28,15 @@
   function ago(iso) { var d = Math.round((Date.now() - Date.parse(iso)) / 864e5); return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'; }
 
   U.screens.build = function () {
-    var h = '<div class="head"><div><h1>Build</h1><div class="sub">The whole app at a glance, and your own notes. Only you can see this.</div></div><div class="row"><a class="btn sm" href="https://claude.ai/artifact/C1iRwe5QZ3xk3HeCpNKWPe" target="_blank" rel="noopener noreferrer">Command center</a><button type="button" class="btn sm" data-act="bload">Refresh</button></div></div>';
+    var h = '<div class="head"><div><h1>Command center</h1><div class="sub">Every product, every task, the build of this app and your notes, in one place. Only you can see this.</div></div><div class="row"><button type="button" class="btn sm" data-act="bload">Refresh</button></div></div>';
     if (ERR) return '<div class="stack">' + h + '<div class="banner warn">Could not load. ' + esc(ERR) + '</div></div>';
     if (!B) { load(); return '<div class="stack">' + h + '<div class="empty">Loading</div></div>'; }
+    h += viewTabs();
+    if (st.view === 'hq') return '<div class="stack">' + hqView(h) + '</div>';
     var s = B.status, f = s.features || [], dep = f.filter(function (x) { return x.state === 'Deployed'; }).length;
     var behind = s.live !== s.built;
-    h += '<div class="bento">'
+    var P = {};
+    P.bento = '<div class="bento">'
       + '<div class="card tile bt"><span class="k">Live now</span><b class="big">' + esc(s.live) + '</b><span class="sm mut">What your users see</span></div>'
       + '<div class="card tile bt' + (behind ? ' hot' : '') + '"><span class="k">Built</span><b class="big">' + esc(s.built) + '</b><span class="sm">' + (behind ? 'Waiting for you to deploy' : 'Same as live') + '</span></div>'
       + '<div class="card tile bt"><span class="k">Next</span><b class="big">' + esc(s.next) + '</b><span class="sm mut">Designing</span></div>'
@@ -43,30 +46,55 @@
       + '</div>';
     // ship checklist
     var steps = s.pending_on_pc || [], dn = steps.filter(function (_, i) { return SHIP[i]; }).length;
-    h += '<div class="grid g2" style="align-items:start"><div class="card"><div class="row" style="justify-content:space-between"><h3>Ship checklist</h3>' + pill(dn + ' of ' + steps.length, dn === steps.length && steps.length ? 'good' : '') + '</div><div class="sm mut" style="margin:4px 0 8px">Your steps on your PC. Ticks stay in this browser only.</div>'
+    P.ship = '<div class="grid g2" style="align-items:start"><div class="card"><div class="row" style="justify-content:space-between"><h3>Ship checklist</h3>' + pill(dn + ' of ' + steps.length, dn === steps.length && steps.length ? 'good' : '') + '</div><div class="sm mut" style="margin:4px 0 8px">Your steps on your PC. Ticks stay in this browser only.</div>'
       + (steps.length ? steps.map(function (t, i) { return '<label class="ck"><input type="checkbox" data-act="bship" data-id="' + i + '"' + (SHIP[i] ? ' checked' : '') + '><span' + (SHIP[i] ? ' class="mut"' : '') + '>' + esc(t) + '</span></label>'; }).join('') : '<div class="empty">Nothing to ship.</div>') + '</div>'
       + '<div class="card"><h3 style="margin-bottom:8px">Next three</h3>' + (s.next_three || []).map(function (t, i) { return '<div class="ck"><b class="tn">' + (i + 1) + '</b><span>' + esc(t) + '</span></div>'; }).join('') + '<h3 style="margin:14px 0 8px">Risks</h3>' + (s.risks || []).map(function (t) { return '<div class="sm" style="padding:4px 0">• ' + esc(t) + '</div>'; }).join('') + '</div></div>';
     // features
     var fl = f.filter(function (x) { return st.fs === 'All' || x.state === st.fs; });
-    h += '<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><h3>Features</h3><div class="tabs">' + ['All'].concat(ORDER).map(function (x) { return '<button type="button" data-act="bfs" data-id="' + x + '" aria-pressed="' + (st.fs === x) + '">' + x + '</button>'; }).join('') + '</div></div><div class="grid g2" style="margin-top:10px">'
+    P.feat = '<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><h3>Features</h3><div class="tabs">' + ['All'].concat(ORDER).map(function (x) { return '<button type="button" data-act="bfs" data-id="' + x + '" aria-pressed="' + (st.fs === x) + '">' + x + '</button>'; }).join('') + '</div></div><div class="grid g2" style="margin-top:10px">'
       + (fl.length ? fl.map(function (x) { return '<div class="card tight"><div class="row" style="justify-content:space-between;gap:8px"><b>' + esc(x.name) + '</b>' + pill(x.state, tone(x.state)) + '</div><div class="sm mut" style="margin-top:4px">' + esc(x.ver || '') + (x.note ? '. ' + esc(x.note) : '') + '</div></div>'; }).join('') : '<div class="empty">None in this state.</div>') + '</div></div>';
     // notes
     var q = st.q.toLowerCase(), nl = B.notes.filter(function (n) { return (st.nt === 'All' || n.tag === st.nt) && (!q || n.text.toLowerCase().indexOf(q) >= 0); });
-    h += '<div class="card"><h3 style="margin-bottom:4px">My notes</h3><div class="sm mut" style="margin-bottom:10px">Private to you. Saved in the app database, so Claude can read them when you ask.</div>'
+    P.notes = '<div class="card"><h3 style="margin-bottom:4px">My notes</h3><div class="sm mut" style="margin-bottom:10px">Private to you. Saved in the app database, so Claude can read them when you ask.</div>'
       + '<div class="stack" style="gap:8px"><textarea id="bn_t" rows="3" maxlength="4000" placeholder="Write a note for later"></textarea><div class="row"><select id="bn_g" style="width:auto">' + TAGS.map(function (t) { return '<option>' + t + '</option>'; }).join('') + '</select><label class="row sm" style="gap:6px"><input type="checkbox" id="bn_p" style="width:18px;height:18px;min-height:0;padding:0"> Pin</label><button type="button" class="btn pri" data-act="bnadd">Save note</button></div></div>'
       + '<div class="row" style="margin:14px 0 6px;flex-wrap:wrap"><div class="tabs">' + ['All'].concat(TAGS).map(function (x) { return '<button type="button" data-act="bnt" data-id="' + x + '" aria-pressed="' + (st.nt === x) + '">' + x + '</button>'; }).join('') + '</div><input id="bn_q" placeholder="Search notes" value="' + esc(st.q) + '" style="flex:1;min-width:140px"></div>'
       + (nl.length ? nl.map(function (n) {
         if (st.edit === n.id) return '<div class="bn"><div class="tx"><textarea id="be_t" rows="3" maxlength="4000">' + esc(n.text) + '</textarea><div class="row" style="margin-top:6px"><button type="button" class="btn sm pri" data-act="bnsave" data-id="' + n.id + '">Save</button><button type="button" class="btn sm" data-act="bnedit" data-id="">Cancel</button></div></div></div>';
         return '<div class="bn"><div class="tx">' + (n.pin ? '📌 ' : '') + esc(n.text) + '<div class="sm mut" style="margin-top:4px">' + pill(n.tag) + ' ' + esc(ago(n.updated_at)) + '</div></div><div class="row" style="gap:4px"><button type="button" class="btn sm" data-act="bnpin" data-id="' + n.id + '">' + (n.pin ? 'Unpin' : 'Pin') + '</button><button type="button" class="btn sm" data-act="bnedit" data-id="' + n.id + '">Edit</button><button type="button" class="btn sm bad" data-act="bndel" data-id="' + n.id + '">Delete</button></div></div>';
       }).join('') : '<div class="empty">No notes yet.</div>') + '</div>';
-    h += '<div class="card scroll"><h3 style="margin-bottom:8px">Changelog</h3><table class="tbl"><tbody>' + (s.changelog || []).map(function (c) { return '<tr><td class="tn"><b>' + esc(c.v) + '</b></td><td class="tn mut">' + esc(c.date) + '</td><td>' + esc(c.text) + '</td></tr>'; }).join('') + '</tbody></table></div>';
-    h += '<div class="sm mut">Source: STATUS.json in the repo. Claude updates it at the end of every build (rule in CLAUDE.md). Updated ' + esc(s.updated || '') + '.</div>';
-    return '<div class="stack">' + h + '</div>';
+    P.log = '<div class="card scroll"><h3 style="margin-bottom:8px">Changelog</h3><table class="tbl"><tbody>' + (s.changelog || []).map(function (c) { if (typeof c === 'string') return '<tr><td colspan="3">' + esc(c) + '</td></tr>'; return '<tr><td class="tn"><b>' + esc(c.v) + '</b></td><td class="tn mut">' + esc(c.date) + '</td><td>' + esc(c.text) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    P.src = '<div class="sm mut">Source: STATUS.json in the repo. Claude updates it at the end of every build (rule in CLAUDE.md). Updated ' + esc(s.updated || '') + '.</div>';
+    return '<div class="stack">' + h + (st.view === 'notes' ? P.notes : st.view === 'log' ? P.log + P.src : P.bento + P.ship + P.feat + P.src) + '</div>';
   };
+
+  function viewTabs() {
+    return '<div class="tabs" style="margin-bottom:12px">' + [['hq', 'Overview'], ['build', 'App build'], ['notes', 'Notes'], ['log', 'Changelog']].map(function (x) { return '<button type="button" data-act="bview" data-id="' + x[0] + '" aria-pressed="' + (st.view === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
+  }
+  function tile(k, n, sub) { return '<div class="card tile bt"><span class="k">' + esc(k) + '</span><b class="big">' + n + '</b><span class="sm mut">' + esc(sub) + '</span></div>'; }
+  function hqView(h) {
+    var q = B.hq || {}, tasks = q.tasks || [], rooms = q.rooms || [];
+    var open = tasks.filter(function (t) { return t.status === 'Open'; });
+    function cnt(p) { return open.filter(function (t) { return t.section.indexOf(p) === 0; }).length; }
+    var wait = tasks.filter(function (t) { return t.status === 'Waiting'; }).length;
+    h += '<div class="bento">' + tile('Open tasks', open.length, 'All rooms') + tile('Hired Abroad', cnt('Hired Abroad'), 'Open, priority') + tile('Design handover', cnt('Design system'), 'Open') + tile('Waiting on others', wait, 'Not on us') + '</div>';
+    h += '<div class="grid g2" style="align-items:start">' + rooms.map(function (r) {
+      return '<div class="card"><div class="row" style="justify-content:space-between"><h3>' + esc(r.name) + '</h3>' + pill(r.tag, r.tag === 'Priority' ? 'good' : r.tag === 'On hold' ? 'warn' : '') + '</div>'
+        + (r.items || []).map(function (i) { return '<div class="ck"><span><b class="mut" style="text-transform:uppercase;letter-spacing:.06em;font-size:11px">' + esc(i.label) + '</b><br>' + esc(i.value) + '</span></div>'; }).join('') + '</div>';
+    }).join('') + '</div>';
+    var areas = ['All'], seen = {};
+    tasks.forEach(function (t) { if (!seen[t.section]) { seen[t.section] = 1; areas.push(t.section); } });
+    var list = tasks.filter(function (t) { return st.ha === 'All' || t.section === st.ha; });
+    h += '<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><h3>Tasks</h3><div class="tabs">' + areas.map(function (a) { return '<button type="button" data-act="bha" data-id="' + esc(a) + '" aria-pressed="' + (st.ha === a) + '">' + esc(a) + '</button>'; }).join('') + '</div></div><div style="margin-top:8px">'
+      + (list.length ? list.map(function (t) { return '<div class="ck"><span style="flex:1;min-width:0;overflow-wrap:anywhere">' + esc(t.task) + '<div class="sm mut">' + esc(t.section) + '</div></span>' + pill(t.status, t.status === 'Done' ? 'good' : t.status === 'Open' ? '' : 'mut') + '</div>'; }).join('') : '<div class="empty">Nothing here.</div>') + '</div></div>';
+    h += '<div class="sm mut">Source: HQ.json, made from TODO.md and the ROOM.md files by scripts/hq-sync.mjs. Run it before each deploy. Updated ' + esc(q.updated || '') + '.</div>';
+    return h;
+  }
 
   var A = U.acts;
   function fail(e) { if (e.message !== 'auth') U.toast('<b>Not saved.</b> ' + esc(e.message)); }
   A.bload = function () { load(); };
+  A.bview = function (el) { st.view = el.getAttribute('data-id'); U.render(); };
+  A.bha = function (el) { st.ha = el.getAttribute('data-id'); U.render(); };
   A.bfs = function (el) { st.fs = el.getAttribute('data-id'); U.render(); };
   A.bnt = function (el) { st.nt = el.getAttribute('data-id'); U.render(); };
   A.bship = function (el) { SHIP[el.getAttribute('data-id')] = el.checked; try { localStorage.setItem('uns-ship', JSON.stringify(SHIP)); } catch (e) {} U.render(); };

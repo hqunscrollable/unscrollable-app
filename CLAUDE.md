@@ -2,7 +2,7 @@
 
 Read `STATUS.json` first, before anything else. It says what is live, what is built but not deployed, what is next, and what is blocked on Tabish.
 
-At the end of every build, update `STATUS.json` (versions, feature states, pending steps, next three, changelog) and add an entry to `public/app/js/releases.js`. Tabish reads STATUS.json in the app at `/app/#build`.
+At the end of every build, update `STATUS.json` (versions, feature states, pending steps, next three, changelog) and add an entry to `public/app/js/releases.js`. Tabish reads STATUS.json in the app at `/app/#build`, which is now the Command center (tab App build). Before each deploy run `node scripts/hq-sync.mjs` so the Overview tab is current.
 
 Facts
 - Cloudflare Worker with static assets and D1 (binding DB). Route unscrollable.studio/app*.

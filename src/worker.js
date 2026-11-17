@@ -5,6 +5,7 @@ import {
 import { notify } from './discord.js';
 import { sendMail, emailOk } from './mail.js';
 import STATUS from '../STATUS.json';
+import HQ from '../HQ.json';
 
 const TZ = 'Asia/Karachi';             // assumption: the founders' working day. Confirm.
 const SESSION_DAYS = 30;
@@ -784,7 +785,7 @@ async function intakeRespDelete(env, user, rid) {
 async function buildInfo(env, user) {
   if (!user.is_dev) return bad('Not allowed.', 403);
   const n = await env.DB.prepare('SELECT id, text, tag, pin, created_at, updated_at FROM dev_notes ORDER BY pin DESC, updated_at DESC LIMIT 500').all();
-  return json({ status: STATUS, notes: n.results });
+  return json({ status: STATUS, notes: n.results, hq: HQ });
 }
 async function noteCreate(env, user, req) {
   if (!user.is_dev) return bad('Not allowed.', 403);

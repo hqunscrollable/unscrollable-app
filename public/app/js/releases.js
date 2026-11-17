@@ -1,6 +1,11 @@
 /* What's new. One entry per release, newest first. Written in plain words for the founders.
    Every build adds one entry here: what it is, what it does, how it cuts friction, where to find it. */
 window.UNS_RELEASES = [
+  { v: '1.7.4', date: '18 Nov 2026', title: 'Build is now the Command center',
+    what: 'The Build screen is now the Command center, one place for everything. The Overview tab shows all three products, the open tasks and where each project stands. App build, Notes and Changelog are tabs next to it. The button from 1.7.3 that opened another site is gone.',
+    does: 'Overview shows how many tasks are open, a card for each product with its folder, account and what it is waiting on, and the full task list you can filter by area. It is made from the task list and the room files before each deploy. The old Build content is unchanged, and the changelog now shows every entry.',
+    friction: 'One place to see where everything stands, with no second site and no extra sign-in.',
+    where: 'Command center, in the System menu. Only Tabish sees it.' },
   { v: '1.7.3', date: '18 Nov 2026', title: 'A Command center button on Build',
     what: 'The Build screen now has a Command center button. It opens one page that shows all three products, the open tasks and where each project stands.',
     does: 'The page reads the task list and the project files from Drive each time it opens, so it is always current. It opens in a new tab. Only Tabish sees the Build screen.',

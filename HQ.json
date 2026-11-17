@@ -1,0 +1,274 @@
+{
+  "updated": "2026-11-17",
+  "tasks": [
+    {
+      "priority": "P1",
+      "section": "Hired Abroad",
+      "task": "Handover of the app to Katarzyna, target 24 to 25 Nov (testing on desktop, tablet, mobile)",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Hired Abroad",
+      "task": "CV audit tool (2 to 3 days)",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Hired Abroad",
+      "task": "App timezone to Europe/Copenhagen",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Hired Abroad",
+      "task": "Review the 3 open change requests (all Tabish's own tests) in CHANGE_REQUESTS.md",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Hired Abroad",
+      "task": "Deck from Ali's research (waiting on Ali), UNS style, no internal notes",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Hired Abroad",
+      "task": "Settle partnership terms before sending the Demo Phase offer or the WhatsApp message",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Hired Abroad",
+      "task": "Waitlist email sequence (3 to 5) and early-bird offer, before the 15 or 16 Dec soft launch",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Hired Abroad",
+      "task": "Mood boards and logo (Mehak), brief is in design/HIRED_ABROAD_DESIGN_BRIEF.md",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Hired Abroad",
+      "task": "Before real data: close the dev door, data processing agreement, consent for her contact list",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Hired Abroad",
+      "task": "Her legal advisor on registration, tax and payments (Katarzyna). No personal Stripe until approved.",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Design system handover",
+      "task": "Day 1: directory with packs for Tabish, Ali, UNS (sources found in Drive)",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Design system handover",
+      "task": "Need from Tabish: the Figma or Drive link to Mehak's new lilac system. Not found yet.",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Design system handover",
+      "task": "Need from Tabish: confirm Ali's claude_ALI_BRAND_SYSTEM.md is the new one",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Design system handover",
+      "task": "Day 1: Mehak's pack once her link arrives",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Design system handover",
+      "task": "Day 2: motion graphics skill that reads the active pack from the directory",
+      "status": "Open"
+    },
+    {
+      "priority": "P1",
+      "section": "Design system handover",
+      "task": "Day 2: one-page \"how to push an update\" guide for Mehak and Ali",
+      "status": "Open"
+    },
+    {
+      "priority": "P2",
+      "section": "Environments",
+      "task": "Command center board, first live version (inside the UNS app, Build screen)",
+      "status": "Done"
+    },
+    {
+      "priority": "P2",
+      "section": "Environments",
+      "task": "Private GitHub repo for the code. Move secrets out of the Drive-synced folder",
+      "status": "Open"
+    },
+    {
+      "priority": "P2",
+      "section": "Environments",
+      "task": "Staging copy of Hired Abroad",
+      "status": "Open"
+    },
+    {
+      "priority": "P2",
+      "section": "Environments",
+      "task": "UNS template (once, then copy per client)",
+      "status": "Open"
+    },
+    {
+      "priority": "P2",
+      "section": "Environments",
+      "task": "Review deck workflow on a UNS domain (domain still to be chosen)",
+      "status": "Open"
+    },
+    {
+      "priority": "",
+      "section": "Waiting on others",
+      "task": "Ali: research docs",
+      "status": "Waiting"
+    },
+    {
+      "priority": "",
+      "section": "Waiting on others",
+      "task": "Mehak: Mehak's lilac system link, mood boards",
+      "status": "Waiting"
+    },
+    {
+      "priority": "",
+      "section": "Waiting on others",
+      "task": "Katarzyna: legal advisor, banner font, Denmark photos",
+      "status": "Waiting"
+    },
+    {
+      "priority": "",
+      "section": "Waiting on others",
+      "task": "Everyone: example sites and logos",
+      "status": "Waiting"
+    },
+    {
+      "priority": "",
+      "section": "Parked",
+      "task": "The Ladder Phase 1 (waiting for Tabish's go)",
+      "status": "Parked"
+    },
+    {
+      "priority": "",
+      "section": "Parked",
+      "task": "Local AI (OpenJarvis): stopped, PC has a 2 GB graphics card",
+      "status": "Parked"
+    }
+  ],
+  "rooms": [
+    {
+      "key": "hired-abroad",
+      "name": "Hired Abroad",
+      "tag": "Priority",
+      "items": [
+        {
+          "label": "Open this folder in Claude Code",
+          "value": "D:\\Hired Abroad\\HB_MASTER_HANDOFF"
+        },
+        {
+          "label": "App code",
+          "value": "D:\\Hired Abroad\\HB_MASTER_HANDOFF\\app"
+        },
+        {
+          "label": "Dev copy",
+          "value": "https://hired-abroad-dev.hq-unscrollable.workers.dev"
+        },
+        {
+          "label": "Live copy",
+          "value": "not yet. Staging copy: planned."
+        },
+        {
+          "label": "Cloudflare account",
+          "value": "Unscrollable (the ship command checks this)."
+        },
+        {
+          "label": "Commands (from `app\\`)",
+          "value": "npm run check, npm run backup, npm run ship"
+        },
+        {
+          "label": "State",
+          "value": "app\\STATE.md. Priorities: TODO.md at the folder root."
+        },
+        {
+          "label": "Waiting on",
+          "value": "Ali's research, Mehak's mood boards, Katarzyna's legal advisor."
+        }
+      ]
+    },
+    {
+      "key": "uns",
+      "name": "UNS",
+      "tag": "Running",
+      "items": [
+        {
+          "label": "Open this folder in Claude Code",
+          "value": "D:\\Unscrollable\\unscrollable-app"
+        },
+        {
+          "label": "State",
+          "value": "STATUS.json and CLAUDE.md in that folder (live version 1.6.x at last check)"
+        },
+        {
+          "label": "Documents, brand and founder files",
+          "value": "D:\\Unscrollable\\UNS everything\\"
+        },
+        {
+          "label": "Design kit",
+          "value": "D:\\Unscrollable\\UNS everything\\1 Documents-Claude\\brand\\uns-design-kit\\"
+        },
+        {
+          "label": "Email signatures",
+          "value": "...\\Unscrollable brand backup\\Email\\Signatures\\"
+        },
+        {
+          "label": "Cloudflare account",
+          "value": "Unscrollable"
+        },
+        {
+          "label": "Deploy",
+          "value": "patches applied by hand from the PC (git am). Manual, to be improved by the UNS template."
+        }
+      ]
+    },
+    {
+      "key": "ladder",
+      "name": "The Ladder",
+      "tag": "On hold",
+      "items": [
+        {
+          "label": "Open this folder in Claude Code",
+          "value": "D:\\LADDER_MASTER_HANDOFF (a copy for reading)"
+        },
+        {
+          "label": "Real repo",
+          "value": "tabishassan/rung-check, on the PC at Desktop\\rung-check"
+        },
+        {
+          "label": "Cloudflare account",
+          "value": "tabishcreates (NOT Unscrollable). Run npx wrangler whoami before any deploy."
+        },
+        {
+          "label": "Start files",
+          "value": "00_START_HERE.md, STATUS.json, STATE.md, docs\\OPEN_WORK.md, docs\\MISTAKES.md"
+        },
+        {
+          "label": "Status",
+          "value": "read and reported, nothing changed. Waiting for Tabish's go and a first task."
+        },
+        {
+          "label": "Hard rules",
+          "value": "no production data steps without a walk-through, never git add ., no secrets in files."
+        }
+      ]
+    }
+  ]
+}
